@@ -27,37 +27,43 @@ export default function MainLayout({ children }) {
     return (
       <div className="flex items-center justify-center bg-white min-h-screen">
         <div className="text-center">
-          <p className="text-gray-600">กำลังโหลด...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">กำลังเชื่อมต่อ LINE...</p>
         </div>
       </div>
     );
   }
 
-  // แสดง error จาก LIFF (ถ้ามี) แต่ไม่แสดง "กรุณาเข้าระบบ" ขณะที่กำลัง redirect ไป login
-  if (liffAuthError && !liffAuthError.includes('no access token')) {
+  // แสดง error จาก LIFF (ถ้ามี)
+  if (liffAuthError) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50">
-        <div className="text-center p-6">
+        <div className="text-center p-6 max-w-md">
           <div className="mb-4">
             <svg className="mx-auto h-12 w-12 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
             </svg>
           </div>
-          <p className="text-gray-600 mb-2">เกิดข้อผิดพลาดในการเข้าสู่ระบบ</p>
-          <p className="text-sm text-gray-500">{liffAuthError}</p>
+          <p className="text-gray-800 font-semibold mb-2">เกิดข้อผิดพลาด</p>
+          <p className="text-sm text-gray-600">{liffAuthError}</p>
+          <button 
+            onClick={() => window.location.reload()} 
+            className="mt-4 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+          >
+            ลองใหม่อีกครั้ง
+          </button>
         </div>
       </div>
     );
   }
 
-  // ถ้าไม่มี user หลังจาก loading เสร็จแล้ว แสดงว่ายังไม่ได้ login หรือกำลัง redirect
-  // ไม่แสดงข้อความ "กรุณาเข้าระบบ" เพราะ LIFF จะจัดการ redirect ให้เอง
+  // ถ้าไม่มี user หลังจาก loading เสร็จ = ยังไม่ได้ auth
   if (!user) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50">
         <div className="text-center p-6">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">กำลังเชื่อมต่อ LINE...</p>
+          <p className="text-gray-600">กำลังเข้าสู่ระบบ...</p>
         </div>
       </div>
     );
