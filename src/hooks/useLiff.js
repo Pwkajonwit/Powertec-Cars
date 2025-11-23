@@ -31,6 +31,7 @@ const useLiff = (liffId) => {
                     isInClient: () => true,
                     isLoggedIn: () => true,
                     getIDToken: () => 'MOCK_ID_TOKEN',
+                    getAccessToken: () => 'MOCK_ACCESS_TOKEN',
                     closeWindow: () => {
                         console.log('Mock: LIFF window closed');
                         window.history.back();
@@ -131,9 +132,9 @@ const useLiff = (liffId) => {
                     return;
                 }
 
-                // ไม่ต้องดึง profile ที่นี่เพราะจะได้จาก API route แทน
-                // const userProfile = await liff.getProfile();
-                // setProfile(userProfile);
+                // ดึง profile เพื่อให้ useLiffAuth ใช้ accessToken ได้
+                const userProfile = await liff.getProfile();
+                setProfile(userProfile);
                 setLiffObject(liff);
 
             } catch (err) {
