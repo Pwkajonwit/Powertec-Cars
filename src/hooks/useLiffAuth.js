@@ -29,10 +29,17 @@ export default function useLiffAuth() {
           return;
         }
 
+        // ตรวจสอบว่า logged in หรือยัง
+        if (!liff.isLoggedIn || !liff.isLoggedIn()) {
+          console.log('LIFF not logged in yet, waiting...');
+          setLoading(false);
+          return;
+        }
+
         // get access token (mock or real)
         const accessToken = typeof liff.getAccessToken === 'function' ? liff.getAccessToken() : null;
         if (!accessToken) {
-          setError('no access token');
+          setError('ไม่สามารถรับ access token จาก LINE ได้');
           setLoading(false);
           return;
         }
