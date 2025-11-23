@@ -6,17 +6,14 @@ import useLiffAuth from '@/hooks/useLiffAuth';
 import { useState, useEffect } from 'react';
 import LiffQueryRouter from '@/components/main/LiffQueryRouter';
 
-// Layout หลักสำหรับพนักงาน
 export default function MainLayout({ children }) {
   const { user, userProfile, loading: authLoading, setUserProfileFromAuth } = useAuth();
-  // ดึง error จาก useLiffAuth มาด้วย
+  // ดึง error: liffAuthError ออกมาใช้งาน
   const { loading: liffLoading, needsLink, linkProfile, linkByPhone, error: liffAuthError, userProfile: liffUserProfile } = useLiffAuth();
-  
   const [phoneInput, setPhoneInput] = useState('');
   const [linking, setLinking] = useState(false);
   const [linkMessage, setLinkMessage] = useState('');
 
-  // ส่ง userProfile จาก useLiffAuth ไปยัง AuthContext
   useEffect(() => {
     if (liffUserProfile && setUserProfileFromAuth) {
       console.log('Setting userProfile from LIFF auth:', liffUserProfile);
@@ -24,61 +21,59 @@ export default function MainLayout({ children }) {
     }
   }, [liffUserProfile, setUserProfileFromAuth]);
 
-  // Loading state
   if (liffLoading || authLoading) {
     return (
-      <div className="flex items-center justify-center bg-white min-h-screen flex-col gap-2">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-600"></div>
-        <p className="text-gray-500 text-sm">กำลังโหลดข้อมูล...</p>
+      <div className="flex items-center justify-center bg-white min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-600 mx-auto mb-2"></div>
+          <p className="text-gray-600">กำลังโหลด...</p>
+        </div>
       </div>
     );
   }
 
-  // --- ส่วนที่เพิ่ม: แสดง Error ถ้าการเชื่อมต่อ LIFF มีปัญหา ---
+  // -------------------------------------------------------
+  // [ส่วนที่เพิ่ม] ถ้ามี Error จาก LIFF/API ให้แสดงออกมาเลย
+  // -------------------------------------------------------
   if (liffAuthError) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-red-50 p-6">
-        <div className="bg-white p-6 rounded-lg shadow-lg max-w-md w-full text-center">
-          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg className="w-8 h-8 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
+      <div className="flex flex-col items-center justify-center min-h-screen bg-red-50 p-6">
+        <div className="bg-white p-6 rounded-lg shadow-md max-w-sm w-full text-center">
+          <h3 className="text-lg font-bold text-red-600 mb-2">เกิดข้อผิดพลาด!</h3>
+          <div className="bg-gray-100 p-3 rounded text-sm font-mono text-left text-red-800 break-words mb-4">
+            {typeof liffAuthError === 'string' ? liffAuthError : JSON.stringify(liffAuthError)}
           </div>
-          <h3 className="text-lg font-bold text-red-700 mb-2">เกิดข้อผิดพลาดในการเข้าสู่ระบบ</h3>
-          <div className="bg-gray-100 p-3 rounded text-xs text-left font-mono text-gray-700 break-words mb-4">
-            {liffAuthError}
-          </div>
-          <button onClick={() => window.location.reload()} className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700">
+          <p className="text-xs text-gray-500 mb-4">
+            กรุณาแคปหน้าจอนี้แจ้งผู้ดูแลระบบ หรือตรวจสอบ Console Log
+          </p>
+          <button 
+            onClick={() => window.location.reload()}
+            className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 w-full"
+          >
             ลองใหม่
           </button>
         </div>
       </div>
     );
   }
-  // -----------------------------------------------------------
+  // -------------------------------------------------------
 
-  // ถ้าไม่มี user ให้แสดงข้อความเข้าสู่ระบบ
+  // ถ้าไม่มี user (และไม่มี Error) ให้แสดงข้อความเข้าสู่ระบบ
   if (!user) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50">
         <div className="text-center p-6">
-          <div className="mb-4">
-            <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-            </svg>
-          </div>
           <p className="text-gray-600 mb-4">กรุณาเข้าสู่ระบบผ่าน LINE</p>
-          {/* เพิ่มปุ่มเพื่อลอง Login ใหม่ (ในกรณีที่ไม่ได้เปิดผ่าน LIFF) */}
-          <p className="text-xs text-gray-400">หากคุณไม่ได้เปิดผ่านแอป LINE โปรดลองเปิดลิ้งค์นี้ในแอป LINE</p>
+          <p className="text-xs text-gray-400">สถานะ: รอการยืนยันตัวตน...</p>
         </div>
       </div>
     );
   }
 
-  // ถ้าต้องผูกเบอร์โทร (needsLink)
+  // ... (โค้ดส่วน needsLink และ return ปกติ ด้านล่างเหมือนเดิม) ...
   if (needsLink) {
-    // ... (โค้ดเดิมส่วน needsLink คงเดิม) ...
-    return (
+     // ... (คงเดิม)
+     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 p-6">
         <div className="bg-white p-6 rounded-lg shadow-lg max-w-md w-full">
           <div className="mb-4">
@@ -138,7 +133,6 @@ export default function MainLayout({ children }) {
     );
   }
 
-  // ถ้ามี userProfile แล้ว (login และมี profile ในระบบ)
   if (userProfile) {
     return (
       <DataProvider userId={userProfile.uid}>
@@ -150,7 +144,6 @@ export default function MainLayout({ children }) {
     );
   }
 
-  // fallback
   return (
     <div className="flex items-center justify-center min-h-screen bg-gray-50">
       <div className="text-center">
