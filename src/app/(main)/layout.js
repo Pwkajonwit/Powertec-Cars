@@ -22,7 +22,7 @@ export default function MainLayout({ children }) {
     }
   }, [liffUserProfile, setUserProfileFromAuth]);
 
-  // Loading state
+  // Loading state - รอให้ทั้ง LIFF และ Auth เสร็จก่อน
   if (liffLoading || authLoading) {
     return (
       <div className="flex items-center justify-center bg-white min-h-screen">
@@ -33,17 +33,31 @@ export default function MainLayout({ children }) {
     );
   }
 
-  // ถ้าไม่มี user ให้แสดงข้อความเข้าสู่ระบบ
-  if (!user) {
+  // แสดง error จาก LIFF (ถ้ามี) แต่ไม่แสดง "กรุณาเข้าระบบ" ขณะที่กำลัง redirect ไป login
+  if (liffAuthError && !liffAuthError.includes('no access token')) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50">
         <div className="text-center p-6">
           <div className="mb-4">
-            <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+            <svg className="mx-auto h-12 w-12 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
             </svg>
           </div>
-          <p className="text-gray-600">กรุณาเข้าสู่ระบบผ่าน LINE</p>
+          <p className="text-gray-600 mb-2">เกิดข้อผิดพลาดในการเข้าสู่ระบบ</p>
+          <p className="text-sm text-gray-500">{liffAuthError}</p>
+        </div>
+      </div>
+    );
+  }
+
+  // ถ้าไม่มี user หลังจาก loading เสร็จแล้ว แสดงว่ายังไม่ได้ login หรือกำลัง redirect
+  // ไม่แสดงข้อความ "กรุณาเข้าระบบ" เพราะ LIFF จะจัดการ redirect ให้เอง
+  if (!user) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-50">
+        <div className="text-center p-6">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">กำลังเชื่อมต่อ LINE...</p>
         </div>
       </div>
     );
