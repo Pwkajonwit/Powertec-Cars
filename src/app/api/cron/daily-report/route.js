@@ -13,7 +13,9 @@ export async function GET(req) {
   try {
     // 1. ตรวจสอบ Authorization (ถ้ามีการตั้งค่า CRON_SECRET ไว้)
     const authHeader = req.headers.get('authorization');
+    // ถ้ามี CRON_SECRET และ header ไม่ตรง ให้กันออก (แต่ถ้าไม่ได้ตั้งไว้ใน .env ก็จะข้ามไป)
     if (process.env.CRON_SECRET && authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+      // อนุญาตให้ Admin กดทดสอบผ่านหน้าเว็บได้ (โดยดูว่าไม่มี auth header มาแบบ Cron)
       console.log('Running report without Cron Secret (Manual Trigger)');
     }
 
@@ -25,6 +27,7 @@ export async function GET(req) {
     const settings = settingsDoc.data();
     const dailySettings = settings?.dailyReport;
 
+    // ตรวจสอบว่าเปิดใช้งานและมี Group ID หรือไม่
     if (!dailySettings?.groupId) {
       return NextResponse.json({ error: 'กรุณาระบุ Group ID ในการตั้งค่าก่อน' }, { status: 400 });
     }
@@ -36,16 +39,17 @@ export async function GET(req) {
     
     const activeVehicles = activeUsageSnap.docs.map(doc => doc.data());
 
-    // 4. ดึงข้อมูลรถทั้งหมดเพื่อเช็คแจ้งเตือน
+    // 4. ดึงข้อมูลรถทั้งหมดเพื่อเช็คแจ้งเตือน (Tax, Insurance)
     const vehiclesSnap = await db.collection('vehicles').get();
     const vehicles = vehiclesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-    // 5. ดึง Expenses เพื่อหาประวัติของเหลว
+    // 5. ดึง Expenses เพื่อหาประวัติของเหลว (Fluid)
     const expensesSnap = await db.collection('expenses').where('type', '==', 'fluid').get();
     const fluidMap = {}; 
     expensesSnap.docs.forEach(doc => {
       const data = doc.data();
       if (data.vehicleId && data.mileage) {
+        // หาเลขไมล์ล่าสุดที่มีการเปลี่ยนของเหลว
         if (!fluidMap[data.vehicleId] || data.mileage > fluidMap[data.vehicleId]) {
           fluidMap[data.vehicleId] = data.mileage;
         }
@@ -61,31 +65,26 @@ export async function GET(req) {
       // 6.1 ภาษี
       if (v.taxDueDate) {
         const taxDate = v.taxDueDate.toDate ? v.taxDueDate.toDate() : new Date(v.taxDueDate);
-        // [Modified] ลบเงื่อนไข taxDate > now ออก เพื่อให้รวมที่หมดอายุไปแล้วด้วย
-        if (taxDate <= thirtyDaysFromNow) {
-          const isExpired = taxDate < now;
-          const icon = isExpired ? "🔴" : "⚠️"; // แดง=ขาดแล้ว, เหลือง=ใกล้หมด
-          alerts.push(`${icon} ภาษี: ${v.licensePlate} หมดอายุ ${taxDate.toLocaleDateString('th-TH')}`);
+        if (taxDate > now && taxDate <= thirtyDaysFromNow) {
+          alerts.push(`⚠️ ภาษี: ${v.licensePlate} หมดอายุ ${taxDate.toLocaleDateString('th-TH')}`);
         }
       }
       // 6.2 ประกัน
       if (v.insuranceExpireDate) {
         const insDate = v.insuranceExpireDate.toDate ? v.insuranceExpireDate.toDate() : new Date(v.insuranceExpireDate);
-        // [Modified] ลบเงื่อนไข insDate > now ออก เพื่อให้รวมที่หมดอายุไปแล้วด้วย
-        if (insDate <= thirtyDaysFromNow) {
-          const isExpired = insDate < now;
-          const icon = isExpired ? "🔴" : "⚠️";
-          alerts.push(`${icon} ประกัน: ${v.licensePlate} หมดอายุ ${insDate.toLocaleDateString('th-TH')}`);
+        if (insDate > now && insDate <= thirtyDaysFromNow) {
+          alerts.push(`⚠️ ประกัน: ${v.licensePlate} หมดอายุ ${insDate.toLocaleDateString('th-TH')}`);
         }
       }
       // 6.3 ของเหลว
-      const lastFluid = fluidMap[v.id] || 0;
+      // Logic: เตือนเมื่อวิ่งครบ 9,000 กม. ขึ้นไป (เหลืออีก 1,000 กม. จะครบ 10,000 หรือเกินกำหนดแล้ว)
+      const lastFluid = fluidMap[v.id] || 0; // ถ้าไม่มีประวัติ ให้เริ่มที่ 0
       const currentKm = v.currentMileage || 0;
-      const dist = currentKm - lastFluid;
+      const dist = currentKm - lastFluid; // ระยะทางที่วิ่งไปแล้วตั้งแต่เปลี่ยนครั้งล่าสุด
 
       if (dist >= 9000) { 
-        const status = dist > 10000 
-            ? `เลยกำหนด ${(dist - 10000).toLocaleString()} กม.` 
+        const status = dist >= 10000 
+            ? `เกินกำหนด ${(dist - 10000).toLocaleString()} กม.` 
             : `เหลืออีก ${(10000 - dist).toLocaleString()} กม.`;
             
         alerts.push(`🛢️ ของเหลว: ${v.licensePlate} (${status})`);
@@ -133,7 +132,7 @@ export async function GET(req) {
       flexContents.body.contents.push({ type: "text", text: "🚗 ไม่มีรถที่กำลังใช้งาน", size: "sm", color: "#999999", align: "center" });
     }
 
-    // ส่วนที่ 2: แจ้งเตือน
+    // ส่วนที่ 2: แจ้งเตือน (ถ้ามี)
     if (alerts.length > 0) {
       flexContents.body.contents.push({ type: "separator", margin: "lg" });
       flexContents.body.contents.push({ type: "text", text: "🔔 การแจ้งเตือน", weight: "bold", size: "sm", color: "#ef4444", margin: "lg" });
@@ -149,6 +148,7 @@ export async function GET(req) {
         });
       });
     } else {
+        // ถ้าไม่มีแจ้งเตือนเลย ให้ใส่ข้อความว่าปกติ
         flexContents.body.contents.push({ type: "separator", margin: "lg" });
         flexContents.body.contents.push({ type: "text", text: "✅ สภาพรถปกติดีทุกคัน", size: "xs", color: "#10b981", margin: "lg", align: "center" });
     }
@@ -159,6 +159,7 @@ export async function GET(req) {
       messages: [{ type: "flex", altText: `รายงานประจำวัน: ${new Date().toLocaleDateString('th-TH')}`, contents: flexContents }]
     };
 
+    // ใช้ fetch ของ Next.js
     const lineRes = await fetch(LINE_PUSH_ENDPOINT, {
       method: 'POST',
       headers: {
