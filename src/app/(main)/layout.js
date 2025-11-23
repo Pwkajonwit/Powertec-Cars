@@ -58,17 +58,7 @@ export default function MainLayout({ children }) {
   }
   // -------------------------------------------------------
 
-  // ถ้าไม่มี user (และไม่มี Error) ให้แสดงข้อความเข้าสู่ระบบ
-  if (!user) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-50">
-        <div className="text-center p-6">
-          <p className="text-gray-600 mb-4">กรุณาเข้าสู่ระบบผ่าน LINE</p>
-          <p className="text-xs text-gray-400">สถานะ: รอการยืนยันตัวตน...</p>
-        </div>
-      </div>
-    );
-  }
+
 
   // ... (โค้ดส่วน needsLink และ return ปกติ ด้านล่างเหมือนเดิม) ...
   if (needsLink) {
@@ -153,3 +143,4 @@ export default function MainLayout({ children }) {
     </div>
   );
 }
+
