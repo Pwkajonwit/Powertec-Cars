@@ -31,7 +31,6 @@ const useLiff = (liffId) => {
                     isInClient: () => true,
                     isLoggedIn: () => true,
                     getIDToken: () => 'MOCK_ID_TOKEN',
-                    getAccessToken: () => 'MOCK_ACCESS_TOKEN',
                     closeWindow: () => {
                         console.log('Mock: LIFF window closed');
                         window.history.back();
@@ -125,29 +124,28 @@ const useLiff = (liffId) => {
                 }
 
                 if (!liff.isLoggedIn()) {
-                    console.log('User not logged in, redirecting to LINE login...');
-                    // ไม่ set loading = false เพราะกำลัง redirect
                     liff.login({ 
                         redirectUri: window.location.href,
                         scope: 'profile openid chat_message.write'
                     });
-                    // หลัง login() จะ redirect ออกไป ไม่ควรทำอะไรต่อ
                     return;
                 }
 
-                console.log('User is logged in via LIFF');
                 // ไม่ต้องดึง profile ที่นี่เพราะจะได้จาก API route แทน
                 // const userProfile = await liff.getProfile();
                 // setProfile(userProfile);
                 setLiffObject(liff);
-                setLoading(false);
 
             } catch (err) {
                 console.error("LIFF initialization failed", err);
                 
+                // --- ส่วนที่แก้ไข ---
                 // แสดง Error ที่ละเอียดขึ้นบนหน้าจอเพื่อการดีบัก
                 const detailedError = `การเชื่อมต่อ LINE ไม่สมบูรณ์: ${err.message || 'Unknown error'}`;
                 setError(detailedError);
+                // --- จบส่วนที่แก้ไข ---
+                
+            } finally {
                 setLoading(false);
             }
         };
