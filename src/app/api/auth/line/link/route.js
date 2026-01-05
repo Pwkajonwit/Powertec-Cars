@@ -10,7 +10,7 @@ import admin from '@/lib/firebaseAdmin';
  */
 export async function POST(request) {
   try {
-    const { lineId, phone } = await request.json();
+    const { lineId, phone, linePictureUrl, lineDisplayName } = await request.json();
 
     if (!lineId || !phone) {
       return NextResponse.json(
@@ -26,49 +26,12 @@ export async function POST(request) {
     const phoneSnapshot = await usersRef.where('phone', '==', phone).limit(1).get();
 
     if (phoneSnapshot.empty) {
-      // สร้างผู้ใช้ใหม่อัตโนมัติถ้าไม่พบในระบบ
-      console.log('No user found with phone:', phone, '- creating new user');
-      
-      try {
-        const newUserData = {
-          phone: phone,
-          lineId: lineId,
-          role: 'driver', // กำหนด role เริ่มต้นเป็น driver สำหรับผู้ใช้ใหม่
-          createdAt: admin.firestore.FieldValue.serverTimestamp(),
-          linkedAt: admin.firestore.FieldValue.serverTimestamp(),
-          lastLogin: admin.firestore.FieldValue.serverTimestamp()
-        };
-        
-        const newUserRef = await usersRef.add(newUserData);
-        const newUid = newUserRef.id;
-        
-        // Create Firebase Auth user
-        await admin.auth().createUser({
-          uid: newUid,
-          phoneNumber: phone,
-          disabled: false
-        });
-        
-        // Create custom token for new user
-        const customToken = await admin.auth().createCustomToken(newUid);
-        
-        return NextResponse.json({ 
-          customToken,
-          userProfile: {
-            uid: newUid,
-            ...newUserData,
-            createdAt: new Date() // convert for JSON
-          },
-          message: 'Successfully created and linked new user'
-        });
-        
-      } catch (error) {
-        console.error('Error creating new user:', error);
-        return NextResponse.json(
-          { error: 'Failed to create new user', details: error.message },
-          { status: 500 }
-        );
-      }
+      // ไม่พบเบอร์โทรในระบบ - ให้แจ้งเตือนแทนการสร้างใหม่
+      console.log('No user found with phone:', phone);
+      return NextResponse.json(
+        { error: 'ไม่พบเบอร์โทรนี้ในระบบ กรุณาตรวจสอบและลองใหม่ หรือติดต่อผู้ดูแลระบบ' },
+        { status: 404 }
+      );
     }
 
     const userDoc = phoneSnapshot.docs[0];
@@ -93,11 +56,23 @@ export async function POST(request) {
     }
 
     // Link the LINE ID to the user
-    await userDoc.ref.update({
+    const updateData = {
       lineId: lineId,
       linkedAt: admin.firestore.FieldValue.serverTimestamp(),
       lastLogin: admin.firestore.FieldValue.serverTimestamp()
-    });
+    };
+
+    // ถ้าผู้ใช้ไม่มีรูป ให้ใช้รูปจาก LINE
+    if (!userData.imageUrl && linePictureUrl) {
+      updateData.imageUrl = linePictureUrl;
+    }
+
+    // ถ้าผู้ใช้ไม่มีชื่อ ให้ใช้ชื่อจาก LINE
+    if (!userData.name && lineDisplayName) {
+      updateData.name = lineDisplayName;
+    }
+
+    await userDoc.ref.update(updateData);
 
     // Create Firebase Auth user if it doesn't exist
     let authUser;
@@ -124,7 +99,7 @@ export async function POST(request) {
     const updatedUserDoc = await userDoc.ref.get();
     const updatedUserData = updatedUserDoc.data();
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       customToken,
       userProfile: {
         uid: uid,

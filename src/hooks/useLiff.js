@@ -2,18 +2,31 @@
 
 import { useState, useEffect } from 'react';
 
+// Preload LIFF SDK at module level to reduce initial load time
+let liffPromise = null;
+const getLiff = () => {
+    if (!liffPromise) {
+        liffPromise = import('@line/liff').then(m => m.default);
+    }
+    return liffPromise;
+};
+
+// Start preloading immediately when this module is imported
+if (typeof window !== 'undefined') {
+    getLiff();
+}
+
 const useLiff = (liffId) => {
     const [liffObject, setLiffObject] = useState(null);
     const [profile, setProfile] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+    const [isInClient, setIsInClient] = useState(false);
 
     useEffect(() => {
-        const initializeLiff = async () => {
-            // ปิดการใช้งาน Mockup ถาวร ตามที่คุณต้องการ
-            // หากต้องการล้างค่าที่ค้างใน localStorage สามารถ uncomment บรรทัดล่างนี้ได้
-            // if (typeof window !== 'undefined') window.localStorage.removeItem('LIFF_MOCK');
+        const startTime = performance.now();
 
+        const initializeLiff = async () => {
             if (!liffId) {
                 setError("LIFF ID is not provided.");
                 setLoading(false);
@@ -21,15 +34,23 @@ const useLiff = (liffId) => {
             }
 
             try {
-                const liff = (await import('@line/liff')).default;
-                await liff.init({ liffId });
+                // Use preloaded LIFF SDK
+                const liff = await getLiff();
+                console.log(`[LIFF] SDK loaded in ${Math.round(performance.now() - startTime)}ms`);
 
-                // จัดการ liff.state ที่ค้างอยู่ใน URL (ถ้ามี)
+                // Init LIFF
+                const initStart = performance.now();
+                await liff.init({ liffId });
+                console.log(`[LIFF] init() completed in ${Math.round(performance.now() - initStart)}ms`);
+
+                // Check if we're in LIFF client (LINE app browser)
+                const inClient = liff.isInClient();
+                setIsInClient(inClient);
+
+                // Handle liff.state redirect
                 const params = new URLSearchParams(window.location.search);
                 let redirectPath = params.get('liff.state');
                 if (redirectPath) {
-                    // ... (logic เดิมสำหรับ clean url) ...
-                    // ส่วนนี้คงไว้เหมือนเดิมเพื่อให้ redirect ทำงานถูกต้อง
                     try {
                         let decoded = redirectPath;
                         for (let i = 0; i < 3; i++) {
@@ -46,10 +67,9 @@ const useLiff = (liffId) => {
                         if (!targetPath.startsWith('/')) targetPath = '/' + targetPath;
 
                         const currentPath = window.location.pathname || '/';
-                        // Logic การ redirect หน้า confirm
                         if (targetPath.startsWith('/confirm') && currentPath !== targetPath) {
                             window.location.replace(targetPath);
-                            return; // หยุดการทำงานเพื่อรอ redirect
+                            return;
                         }
                     } catch (e) {
                         console.warn('Failed to normalize liff.state', e);
@@ -57,29 +77,43 @@ const useLiff = (liffId) => {
                 }
 
                 if (!liff.isLoggedIn()) {
-                    // กรณีต้อง Login: สั่ง Login
+                    // Need to login
+                    console.log('[LIFF] Not logged in, redirecting to LINE login...');
                     liff.login({
                         scope: 'profile openid chat_message.write'
                     });
                     return;
                 }
 
-                // กรณี Login แล้ว: เก็บค่า liff และจบการโหลด
+                // Logged in successfully
+                console.log(`[LIFF] Total initialization: ${Math.round(performance.now() - startTime)}ms`);
                 setLiffObject(liff);
                 setLoading(false);
 
             } catch (err) {
                 console.error("LIFF initialization failed", err);
-                const detailedError = `การเชื่อมต่อ LINE ไม่สมบูรณ์: ${err.message || 'Unknown error'}`;
-                setError(detailedError);
-                setLoading(false); // จบการโหลดเมื่อเกิด Error
+
+                // Better error message based on error type
+                let errorMessage = 'การเชื่อมต่อ LINE ไม่สมบูรณ์';
+
+                if (err.message?.includes('client features') || err.message?.includes('liff.init')) {
+                    errorMessage = 'กรุณาเข้าใช้งานผ่าน LINE App (ไม่รองรับการเข้าจาก browser ปกติ)';
+                } else if (err.code === 'INVALID_ID_TOKEN') {
+                    errorMessage = 'Session หมดอายุ กรุณาปิดแล้วเปิด LINE ใหม่';
+                } else if (err.message) {
+                    errorMessage = `${errorMessage}: ${err.message}`;
+                }
+
+                setError(errorMessage);
+                setLoading(false);
             }
         };
 
         initializeLiff();
     }, [liffId]);
 
-    return { liff: liffObject, profile, loading, error };
+    return { liff: liffObject, profile, loading, error, isInClient };
 };
 
 export default useLiff;
+
