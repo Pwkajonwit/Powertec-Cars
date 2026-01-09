@@ -2,7 +2,7 @@
 import React from "react";
 
 import { useState, useEffect } from "react";
-import { useAuth } from "@/context/AuthContext";
+import { useUser } from "@/context/UserContext";
 import { useRouter } from "next/navigation";
 
 export default function ExpenseLogPage() {
@@ -12,56 +12,56 @@ export default function ExpenseLogPage() {
   const scanIntervalRef = React.useRef(null);
   const videoRef = React.useRef(null);
   const canvasRef = React.useRef(null);
-  
+
   // State สำหรับ custom modal
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [confirmData, setConfirmData] = useState({ message: '', value: null, onConfirm: null });
   const [showAlertModal, setShowAlertModal] = useState(false);
   const [alertData, setAlertData] = useState({ title: '', message: '', type: 'info' });
-  
+
   // ฟังก์ชัน custom alert
   const customAlert = (title, message, type = 'info') => {
     setAlertData({ title, message, type });
     setShowAlertModal(true);
   };
-  
+
   // ฟังก์ชัน custom confirm
   const customConfirm = (message, value, onConfirm) => {
     setConfirmData({ message, value, onConfirm });
     setShowConfirmModal(true);
   };
-  
+
   // ฟังก์ชันเปิดกล้องและเริ่มแสกนอัตโนมัติ
   const startAutoScan = async () => {
     setIsScanning(true);
     setScanStatus('กำลังเปิดกล้อง...');
-    
+
     try {
       // เปิดกล้อง
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: 'environment' }
       });
-      
+
       // สร้าง video element
       const video = document.createElement('video');
       video.srcObject = stream;
       video.setAttribute('autoplay', '');
       video.setAttribute('playsinline', '');
       video.play();
-      
+
       // รอให้ video พร้อม
       await new Promise(resolve => {
         video.onloadedmetadata = resolve;
       });
-      
+
       setScanStatus('📸 กำลังมองหาเลขไมล์...');
-      
+
       // สร้าง canvas สำหรับจับภาพ
       const canvas = document.createElement('canvas');
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
       const ctx = canvas.getContext('2d');
-      
+
       // สร้าง modal แสดงกล้อง
       const modal = document.createElement('div');
       modal.id = 'scanModal';
@@ -83,15 +83,15 @@ export default function ExpenseLogPage() {
         </div>
       `;
       document.body.appendChild(modal);
-      
+
       const modalVideo = document.getElementById('scanVideo');
       const statusText = document.getElementById('scanStatusText');
       modalVideo.srcObject = stream;
-      
+
       // โหลด Tesseract worker
       setScanStatus('⏳ กำลังเตรียมเครื่องมืออ่านข้อความ...');
       statusText.textContent = 'กำลังเตรียมเครื่องมืออ่านข้อความ...';
-      
+
       const { createWorker } = await import('tesseract.js');
       const worker = await createWorker('eng', 1, {
         logger: m => {
@@ -101,64 +101,64 @@ export default function ExpenseLogPage() {
           }
         }
       });
-      
+
       let scanCount = 0;
       let isProcessing = false;
-      
+
       // ฟังก์ชันแสกนทุก 2 วินาที
       const scanFrame = async () => {
         if (isProcessing) return;
-        
+
         isProcessing = true;
         scanCount++;
-        
+
         try {
           // จับภาพจาก video
           ctx.drawImage(modalVideo, 0, 0);
           const imageData = canvas.toDataURL('image/jpeg', 0.95);
-          
+
           statusText.textContent = `🔍 กำลังอ่านเลขไมล์... (ครั้งที่ ${scanCount})`;
-          
+
           // ทำ OCR
           const { data: { text } } = await worker.recognize(imageData);
-          
+
           console.log(`Scan ${scanCount}:`, text);
-          
+
           // หาตัวเลขในภาพ
           const numbers = text.match(/\d+/g);
-          
+
           if (numbers && numbers.length > 0) {
             // กรองเฉพาะเลข 5 หลักขึ้นไป
             const validNumbers = numbers
               .map(n => parseInt(n))
               .filter(n => n >= 10000 && n <= 9999999);
-            
+
             if (validNumbers.length > 0) {
               // หาเลขที่ใหญ่ที่สุด
               const mileageValue = Math.max(...validNumbers);
               const minValue = lastFuelMileage || activeUsage?.startMileage || 0;
-              
+
               if (mileageValue >= minValue) {
                 // เจอเลขไมล์แล้ว!
                 console.log('✅ Found valid mileage:', mileageValue);
-                
+
                 // หยุดแสกน
                 clearInterval(scanIntervalRef.current);
                 await worker.terminate();
-                
+
                 // ปิดกล้อง
                 stream.getTracks().forEach(track => track.stop());
-                
+
                 // แสดง confirmation
                 statusText.textContent = '✅ เจอเลขไมล์แล้ว!';
                 statusText.style.color = '#10b981';
-                
+
                 await new Promise(resolve => setTimeout(resolve, 500));
-                
+
                 document.body.removeChild(modal);
                 setIsScanning(false);
                 setScanStatus('');
-                
+
                 // ยืนยันกับผู้ใช้ด้วย custom modal
                 customConfirm(
                   `อ่านเลขไมล์ได้: ${mileageValue.toLocaleString()} กม.`,
@@ -167,27 +167,27 @@ export default function ExpenseLogPage() {
                     setMileage(value.toString());
                   }
                 );
-                
+
                 return;
               }
             }
           }
-          
+
           statusText.textContent = `🔍 กำลังมองหาเลขไมล์... (ครั้งที่ ${scanCount})`;
-          
+
         } catch (error) {
           console.error('Scan error:', error);
         }
-        
+
         isProcessing = false;
       };
-      
+
       // เริ่มแสกนทุก 2 วินาที
       scanIntervalRef.current = setInterval(scanFrame, 2000);
-      
+
       // แสกนครั้งแรกทันที
       setTimeout(scanFrame, 500);
-      
+
       // ปุ่มยกเลิก
       document.getElementById('cancelScanBtn').onclick = () => {
         clearInterval(scanIntervalRef.current);
@@ -197,7 +197,7 @@ export default function ExpenseLogPage() {
         setIsScanning(false);
         setScanStatus('');
       };
-      
+
     } catch (err) {
       console.error('Camera error:', err);
       customAlert('ไม่สามารถเข้าถึงกล้อง', 'กรุณาอนุญาตการใช้งานกล้องในเบราว์เซอร์', 'error');
@@ -207,7 +207,7 @@ export default function ExpenseLogPage() {
   };
   // State สำหรับรายการเติมน้ำมันล่าสุด
   const [latestFuelExpense, setLatestFuelExpense] = useState(null);
-  const { user, userProfile } = useAuth();
+  const { user } = useUser();
   const router = useRouter();
   const [activeUsage, setActiveUsage] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -223,7 +223,7 @@ export default function ExpenseLogPage() {
 
   // Fetch active vehicle usage
   useEffect(() => {
-    if (!user && !userProfile) {
+    if (!user) {
       setLoading(false);
       return;
     }
@@ -235,7 +235,7 @@ export default function ExpenseLogPage() {
       if (hasFetched) return;
       hasFetched = true;
       try {
-        const userId = userProfile?.lineId || user?.uid;
+        const userId = user?.lineId;
         const response = await fetch(`/api/vehicle-usage/active?userId=${userId}`);
         const result = await response.json();
 
@@ -334,7 +334,7 @@ export default function ExpenseLogPage() {
     return () => {
       isMounted = false;
     };
-  }, [user, userProfile]);
+  }, [user]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -373,8 +373,8 @@ export default function ExpenseLogPage() {
     setMessage("");
 
     try {
-      const userId = userProfile?.lineId || user?.uid;
-      const userName = userProfile?.displayName || userProfile?.name || user?.displayName || user?.name || "-";
+      const userId = user?.lineId;
+      const userName = user?.displayName || user?.name || "-";
       // กำหนด type ที่จะส่งไป backend
       let submitType = type;
       if (type === "fluid") submitType = "fluid";
@@ -423,10 +423,36 @@ export default function ExpenseLogPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">กำลังโหลดข้อมูล...</p>
+        <div className="w-full max-w-xs px-6 text-center">
+          {/* Money Icon */}
+          <div className="w-16 h-16 bg-teal-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <svg className="w-8 h-8 text-teal-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18.75a60.07 60.07 0 0115.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 013 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 00-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 01-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 003 15h-.75M15 10.5a3 3 0 11-6 0 3 3 0 016 0zm3 0h.008v.008H18V10.5zm-12 0h.008v.008H6V10.5z" />
+            </svg>
+          </div>
+
+          {/* Title */}
+          <h2 className="text-lg font-semibold text-gray-800 mb-2">บันทึกค่าใช้จ่าย</h2>
+          <p className="text-sm text-gray-500 mb-6">กำลังโหลดข้อมูลรถ...</p>
+
+          {/* Progress Bar */}
+          <div className="w-full h-1.5 bg-gray-200 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-gradient-to-r from-teal-500 to-teal-400 rounded-full"
+              style={{
+                animation: 'loading-progress 1.5s ease-in-out infinite'
+              }}
+            />
+          </div>
         </div>
+
+        <style jsx>{`
+          @keyframes loading-progress {
+            0% { width: 0%; margin-left: 0%; }
+            50% { width: 60%; margin-left: 20%; }
+            100% { width: 0%; margin-left: 100%; }
+          }
+        `}</style>
       </div>
     );
   }
@@ -483,8 +509,8 @@ export default function ExpenseLogPage() {
                   type="button"
                   onClick={() => setType("fuel")}
                   className={`p-4 border-2 rounded-lg text-center transition-all ${type === "fuel"
-                      ? "border-teal-500 bg-teal-50 text-teal-700"
-                      : "border-gray-300 hover:border-teal-300"
+                    ? "border-teal-500 bg-teal-50 text-teal-700"
+                    : "border-gray-300 hover:border-teal-300"
                     }`}
                 >
                   <div className="text-3xl mb-2">⛽</div>
@@ -494,8 +520,8 @@ export default function ExpenseLogPage() {
                   type="button"
                   onClick={() => setType("fluid")}
                   className={`p-4 border-2 rounded-lg text-center transition-all ${type === "fluid"
-                      ? "border-blue-500 bg-blue-50 text-blue-700"
-                      : "border-gray-300 hover:border-blue-300"
+                    ? "border-blue-500 bg-blue-50 text-blue-700"
+                    : "border-gray-300 hover:border-blue-300"
                     }`}
                 >
                   <div className="text-3xl mb-2">🛢️</div>
@@ -505,8 +531,8 @@ export default function ExpenseLogPage() {
                   type="button"
                   onClick={() => setType("other")}
                   className={`p-4 border-2 rounded-lg text-center transition-all ${type === "other"
-                      ? "border-teal-500 bg-teal-50 text-teal-700"
-                      : "border-gray-300 hover:border-teal-300"
+                    ? "border-teal-500 bg-teal-50 text-teal-700"
+                    : "border-gray-300 hover:border-teal-300"
                     }`}
                 >
                   <div className="text-3xl mb-2">💰</div>
@@ -596,8 +622,8 @@ export default function ExpenseLogPage() {
 
             {message && (
               <div className={`p-3 rounded-lg text-sm text-center ${message.includes('สำเร็จ')
-                  ? 'bg-green-100 text-green-700'
-                  : 'bg-red-100 text-red-700'
+                ? 'bg-green-100 text-green-700'
+                : 'bg-red-100 text-red-700'
                 }`}>
                 {message}
               </div>
@@ -613,34 +639,31 @@ export default function ExpenseLogPage() {
           </form>
         </div>
       </div>
-      
+
       {/* Custom Alert Modal */}
       {showAlertModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[10000] p-4">
           <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full animate-scale-in">
-            <div className={`p-6 rounded-t-2xl ${
-              alertData.type === 'error' ? 'bg-red-50' : 
-              alertData.type === 'success' ? 'bg-green-50' : 
-              'bg-blue-50'
-            }`}>
+            <div className={`p-6 rounded-t-2xl ${alertData.type === 'error' ? 'bg-red-50' :
+              alertData.type === 'success' ? 'bg-green-50' :
+                'bg-blue-50'
+              }`}>
               <div className="flex items-center justify-center mb-3">
-                <div className={`w-16 h-16 rounded-full flex items-center justify-center ${
-                  alertData.type === 'error' ? 'bg-red-100' : 
-                  alertData.type === 'success' ? 'bg-green-100' : 
-                  'bg-blue-100'
-                }`}>
+                <div className={`w-16 h-16 rounded-full flex items-center justify-center ${alertData.type === 'error' ? 'bg-red-100' :
+                  alertData.type === 'success' ? 'bg-green-100' :
+                    'bg-blue-100'
+                  }`}>
                   <span className="text-4xl">
-                    {alertData.type === 'error' ? '❌' : 
-                     alertData.type === 'success' ? '✅' : 
-                     'ℹ️'}
+                    {alertData.type === 'error' ? '❌' :
+                      alertData.type === 'success' ? '✅' :
+                        'ℹ️'}
                   </span>
                 </div>
               </div>
-              <h3 className={`text-xl font-bold text-center mb-2 ${
-                alertData.type === 'error' ? 'text-red-700' : 
-                alertData.type === 'success' ? 'text-green-700' : 
-                'text-blue-700'
-              }`}>
+              <h3 className={`text-xl font-bold text-center mb-2 ${alertData.type === 'error' ? 'text-red-700' :
+                alertData.type === 'success' ? 'text-green-700' :
+                  'text-blue-700'
+                }`}>
                 {alertData.title}
               </h3>
               <p className="text-center text-gray-600">{alertData.message}</p>
@@ -648,11 +671,10 @@ export default function ExpenseLogPage() {
             <div className="p-4">
               <button
                 onClick={() => setShowAlertModal(false)}
-                className={`w-full py-3 rounded-xl font-semibold text-white transition-all ${
-                  alertData.type === 'error' ? 'bg-red-600 hover:bg-red-700' : 
-                  alertData.type === 'success' ? 'bg-green-600 hover:bg-green-700' : 
-                  'bg-blue-600 hover:bg-blue-700'
-                }`}
+                className={`w-full py-3 rounded-xl font-semibold text-white transition-all ${alertData.type === 'error' ? 'bg-red-600 hover:bg-red-700' :
+                  alertData.type === 'success' ? 'bg-green-600 hover:bg-green-700' :
+                    'bg-blue-600 hover:bg-blue-700'
+                  }`}
               >
                 ตกลง
               </button>
@@ -660,7 +682,7 @@ export default function ExpenseLogPage() {
           </div>
         </div>
       )}
-      
+
       {/* Custom Confirm Modal */}
       {showConfirmModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[10000] p-4">
