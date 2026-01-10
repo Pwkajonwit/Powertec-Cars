@@ -20,43 +20,48 @@ export default function MainHeader({ userProfile, activeTab, setActiveTab }) {
   }, [pathname, setActiveTab]);
 
   return (
-    <div className="gradient-bg px-6 pt-8 pb-24">
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-4">
-          <div className="w-14 h-14 rounded-md overflow-hidden border border-white">
-            {userProfile?.imageUrl || userProfile?.photoURL ? (
-              <Image
-                src={userProfile.imageUrl || userProfile.photoURL}
-                alt={userProfile?.name || 'user'}
-                width={56}
-                height={56}
-                className="w-full h-full object-cover"
-                unoptimized
-              />
-            ) : (
-              <div className="bg-teal-800 w-full h-full flex items-center justify-center text-white font-semibold text-xl">
-                {userProfile?.name?.charAt(0) || 'U'}
-              </div>
-            )}
-          </div>
-          <div className="text-white">
-            <p className="font-semibold text-lg">{userProfile?.name || 'นายทดสอบ'}</p>
-            <p className="text-sm text-teal-100">{userProfile?.position || 'พนักงาน'}</p>
-          </div>
+    <div className="gradient-bg">
+      {/* User Info Row */}
+      <div className="flex items-center gap-3 mb-3">
+        {/* Avatar */}
+        <div className="w-11 h-11 rounded-full overflow-hidden border-2 border-white/25 flex-shrink-0">
+          {userProfile?.imageUrl || userProfile?.photoURL || userProfile?.pictureUrl ? (
+            <Image
+              src={userProfile.imageUrl || userProfile.photoURL || userProfile.pictureUrl}
+              alt={userProfile?.name || 'user'}
+              width={44}
+              height={44}
+              className="w-full h-full object-cover"
+              unoptimized
+            />
+          ) : (
+            <div className="bg-white/20 w-full h-full flex items-center justify-center text-white font-semibold text-base">
+              {userProfile?.name?.charAt(0) || 'U'}
+            </div>
+          )}
         </div>
 
+        {/* User Info */}
+        <div className="flex-1 min-w-0">
+          <p className="font-semibold text-white text-base truncate leading-tight">
+            {userProfile?.name || 'ผู้ใช้งาน'}
+          </p>
+          <p className="text-sm text-white/70 truncate">
+            {userProfile?.position || 'พนักงาน'}
+          </p>
+        </div>
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-3">
+      <div className="flex gap-2">
         <button
           onClick={() => {
             router.push('/my-vehicle');
             if (typeof setActiveTab === 'function') setActiveTab('vehicle');
           }}
-          className={`flex-1 py-3 rounded-lg font-semibold transition-all shadow-sm border-0 focus:outline-none ${activeTab === 'vehicle'
-              ? 'bg-teal-900 text-white ring-2 ring-teal-200/20'
-              : 'bg-teal-500/40 text-teal-100 hover:bg-teal-500/70'
+          className={`flex-1 py-2.5 rounded-lg text-base font-medium transition-all ${activeTab === 'vehicle'
+            ? 'bg-white text-teal-700 shadow-sm'
+            : 'bg-white/10 text-white/90 hover:bg-white/20'
             }`}
         >
           รถของฉัน
@@ -66,9 +71,9 @@ export default function MainHeader({ userProfile, activeTab, setActiveTab }) {
             router.push('/my-trips');
             if (typeof setActiveTab === 'function') setActiveTab('trips');
           }}
-          className={`flex-1 py-3 rounded-lg font-semibold transition-all shadow-sm border-0 focus:outline-none ${activeTab === 'trips'
-              ? 'bg-teal-900 text-white ring-2 ring-teal-200/20'
-              : 'bg-teal-500/40 text-teal-100 hover:bg-teal-500/70'
+          className={`flex-1 py-2.5 rounded-lg text-base font-medium transition-all ${activeTab === 'trips'
+            ? 'bg-white text-teal-700 shadow-sm'
+            : 'bg-white/10 text-white/90 hover:bg-white/20'
             }`}
         >
           ประวัติ

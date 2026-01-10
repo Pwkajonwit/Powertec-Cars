@@ -89,18 +89,189 @@ export default function VehicleSelectionPage() {
         return;
       }
 
+      // ตรวจสอบว่าต้องรออนุมัติหรือไม่
+      if (result.approvalRequired) {
+        setMessage("✅ ส่งคำขอใช้รถสำเร็จ! กรุณารอการอนุมัติจากแอดมิน");
+
+        // ส่ง Flex Message "รออนุมัติ"
+        try {
+          const settingsRes = await fetch('/api/notifications/settings');
+          const settingsData = await settingsRes.json();
+          const userChatEnabled = settingsData?.userChatMessage?.vehicle_borrowed !== false;
+
+          if (userChatEnabled && typeof window !== 'undefined' && window.liff && window.liff.isInClient()) {
+            const now = new Date().toLocaleDateString('th-TH', {
+              day: '2-digit', month: 'short', year: 'numeric',
+              hour: '2-digit', minute: '2-digit'
+            });
+            const vehicleData = vehicles.find(v => v.id === selectedVehicle);
+
+            await window.liff.sendMessages([{
+              type: 'flex',
+              altText: `คำขอใช้รถ ${vehicleData?.licensePlate || ''} (รออนุมัติ)`,
+              contents: {
+                type: 'bubble',
+                size: 'kilo',
+                body: {
+                  type: 'box',
+                  layout: 'vertical',
+                  contents: [
+                    { type: 'text', text: 'คำขอใช้รถ (รออนุมัติ)', weight: 'bold', size: 'md', color: '#f59e0b' },
+                    { type: 'separator', margin: 'lg' },
+                    {
+                      type: 'box',
+                      layout: 'vertical',
+                      margin: 'lg',
+                      spacing: 'sm',
+                      contents: [
+                        {
+                          type: 'box',
+                          layout: 'horizontal',
+                          contents: [
+                            { type: 'text', text: 'ทะเบียน', size: 'sm', color: '#888888', flex: 2 },
+                            { type: 'text', text: vehicleData?.licensePlate || '-', size: 'sm', color: '#333333', flex: 3, align: 'end' }
+                          ]
+                        },
+                        {
+                          type: 'box',
+                          layout: 'horizontal',
+                          contents: [
+                            { type: 'text', text: 'รถ', size: 'sm', color: '#888888', flex: 2 },
+                            { type: 'text', text: `${vehicleData?.brand || ''} ${vehicleData?.model || ''}`.trim() || '-', size: 'sm', color: '#333333', flex: 3, align: 'end', wrap: true }
+                          ]
+                        },
+                        ...(destination ? [{
+                          type: 'box',
+                          layout: 'horizontal',
+                          contents: [
+                            { type: 'text', text: 'จุดหมาย', size: 'sm', color: '#888888', flex: 2 },
+                            { type: 'text', text: destination, size: 'sm', color: '#333333', flex: 3, align: 'end', wrap: true }
+                          ]
+                        }] : []),
+                        ...(purpose ? [{
+                          type: 'box',
+                          layout: 'horizontal',
+                          contents: [
+                            { type: 'text', text: 'วัตถุประสงค์', size: 'sm', color: '#888888', flex: 2 },
+                            { type: 'text', text: purpose, size: 'sm', color: '#333333', flex: 3, align: 'end', wrap: true }
+                          ]
+                        }] : []),
+                        {
+                          type: 'box',
+                          layout: 'horizontal',
+                          contents: [
+                            { type: 'text', text: 'เวลา', size: 'sm', color: '#888888', flex: 2 },
+                            { type: 'text', text: now, size: 'sm', color: '#333333', flex: 3, align: 'end' }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              }
+            }]);
+          }
+        } catch (err) {
+          console.error("Error sending Pending Approval Flex:", err);
+        }
+
+        // หน่วงเวลา 2 วินาทีแล้วไปหน้า my-vehicle
+        setTimeout(() => {
+          router.push('/my-vehicle');
+        }, 2000);
+        setIsLoading(false);
+        return;
+      }
+
       setMessage("เริ่มใช้งานรถสำเร็จ!");
 
-      // Reset form
-      setSelectedVehicle("");
-      setDestination("");
-      setPurpose("");
-      setIsLoading(false);
+      // ส่งข้อความ LINE Flex Message จาก user (ตรวจสอบ settings ก่อน)
+      try {
+        // ดึง settings ก่อน
+        const settingsRes = await fetch('/api/notifications/settings');
+        const settingsData = await settingsRes.json();
+        const userChatEnabled = settingsData?.userChatMessage?.vehicle_borrowed !== false; // default true
 
-      // Navigate to my active vehicle page
+        if (userChatEnabled && typeof window !== 'undefined' && window.liff && window.liff.isInClient()) {
+          const now = new Date().toLocaleDateString('th-TH', {
+            day: '2-digit', month: 'short', year: 'numeric',
+            hour: '2-digit', minute: '2-digit'
+          });
+          const vehicleData = vehicles.find(v => v.id === selectedVehicle);
+
+          await window.liff.sendMessages([{
+            type: 'flex',
+            altText: `เริ่มใช้รถ ${vehicleData?.licensePlate || ''}`,
+            contents: {
+              type: 'bubble',
+              size: 'kilo',
+              body: {
+                type: 'box',
+                layout: 'vertical',
+                contents: [
+                  { type: 'text', text: 'เริ่มใช้รถ', weight: 'bold', size: 'md', color: '#0d9488' },
+                  { type: 'separator', margin: 'lg' },
+                  {
+                    type: 'box',
+                    layout: 'vertical',
+                    margin: 'lg',
+                    spacing: 'sm',
+                    contents: [
+                      {
+                        type: 'box',
+                        layout: 'horizontal',
+                        contents: [
+                          { type: 'text', text: 'ทะเบียน', size: 'sm', color: '#888888', flex: 2 },
+                          { type: 'text', text: vehicleData?.licensePlate || '-', size: 'sm', color: '#333333', flex: 3, align: 'end' }
+                        ]
+                      },
+                      {
+                        type: 'box',
+                        layout: 'horizontal',
+                        contents: [
+                          { type: 'text', text: 'รถ', size: 'sm', color: '#888888', flex: 2 },
+                          { type: 'text', text: `${vehicleData?.brand || ''} ${vehicleData?.model || ''}`.trim() || '-', size: 'sm', color: '#333333', flex: 3, align: 'end', wrap: true }
+                        ]
+                      },
+                      ...(destination ? [{
+                        type: 'box',
+                        layout: 'horizontal',
+                        contents: [
+                          { type: 'text', text: 'จุดหมาย', size: 'sm', color: '#888888', flex: 2 },
+                          { type: 'text', text: destination, size: 'sm', color: '#333333', flex: 3, align: 'end', wrap: true }
+                        ]
+                      }] : []),
+                      ...(purpose ? [{
+                        type: 'box',
+                        layout: 'horizontal',
+                        contents: [
+                          { type: 'text', text: 'วัตถุประสงค์', size: 'sm', color: '#888888', flex: 2 },
+                          { type: 'text', text: purpose, size: 'sm', color: '#333333', flex: 3, align: 'end', wrap: true }
+                        ]
+                      }] : []),
+                      {
+                        type: 'box',
+                        layout: 'horizontal',
+                        contents: [
+                          { type: 'text', text: 'เวลา', size: 'sm', color: '#888888', flex: 2 },
+                          { type: 'text', text: now, size: 'sm', color: '#333333', flex: 3, align: 'end' }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          }]);
+        }
+      } catch (err) {
+        console.error("Error sending LINE message:", err);
+      }
+
+      // Redirect หลังจากสำเร็จ (กรณี active)
       setTimeout(() => {
         router.push('/my-vehicle');
-      }, 1000);
+      }, 1500);
 
     } catch (error) {
       console.error("Error starting vehicle usage:", error);
@@ -120,7 +291,7 @@ export default function VehicleSelectionPage() {
       </div>
 
       {/* Content */}
-      <div className="px-6 -mt-16">
+      <div className="px-4 py-2 -mt-8">
         <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
           <form onSubmit={handleStartUsing} className="p-6 space-y-4">
 

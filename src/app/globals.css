@@ -3,7 +3,7 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
-  --font-base:#000000;
+  --font-base: #000000;
 }
 
 @theme inline {
@@ -18,7 +18,7 @@
   :root {
     --background: #0a0a0a;
     --foreground: #ededed;
-    --font-base:#000000;
+    --font-base: #000000;
   }
 }
 
@@ -29,11 +29,11 @@ body {
 }
 
 .gradient-bg {
-  background-image: linear-gradient(to bottom, #075b50, #002629);
-  padding-left: 1.5rem; /* 24px */
-  padding-right: 1.5rem; /* 24px */
-  padding-top: 2rem; /* 32px */
-  padding-bottom: 5rem; /* 96px */
+  background: linear-gradient(135deg, #0d9488 0%, #0f766e 50%, #134e4a 100%);
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
+  padding-top: 1.5rem;
+  padding-bottom: 3rem;
 }
 
 
@@ -43,6 +43,7 @@ body {
     opacity: 0;
     transform: scale(0.9);
   }
+
   100% {
     opacity: 1;
     transform: scale(1);

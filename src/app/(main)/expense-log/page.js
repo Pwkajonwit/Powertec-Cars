@@ -459,41 +459,59 @@ export default function ExpenseLogPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="gradient-bg text-white p-6 pb-24">
-        <div className="flex items-center gap-3 mb-2">
-          <button onClick={() => router.back()} className="p-2 hover:bg-white/20 rounded-lg">
-            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+      {/* Minimal Header */}
+      <div className="gradient-bg">
+        <div className="flex items-center gap-2">
+          <button onClick={() => router.back()} className="p-1 hover:bg-white/20 rounded-lg -ml-1">
+            <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
             </svg>
           </button>
-          <h1 className="text-2xl font-bold">บันทึกค่าใช้จ่าย</h1>
+          <h1 className="text-base font-semibold text-white">บันทึกค่าใช้จ่าย</h1>
         </div>
-        <p className="text-teal-100 text-sm">บันทึกค่าเติมน้ำมันและค่าใช้จ่ายอื่นๆ</p>
       </div>
 
       {/* Content */}
-      <div className="px-6 -mt-16">
-        <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-          <form onSubmit={handleSubmit} className="p-6 space-y-4">
-            {/* Vehicle Info */}
+      <div className="px-4 -mt-8">
+        <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+          <form onSubmit={handleSubmit} className="p-4 space-y-3">
+            {/* Vehicle Info - ทะเบียน */}
             {activeUsage && (
-              <div className="bg-teal-50 border border-teal-200 rounded-lg p-4 mb-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                  <span className="text-sm font-medium text-teal-700">กำลังใช้งาน</span>
-                </div>
-                <p className="font-semibold text-teal-900">{activeUsage.vehicleLicensePlate}</p>
+              <div className="flex items-center gap-2 pb-2 border-b border-gray-100">
+                <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
+                <span className="font-semibold text-gray-800 text-sm">{activeUsage.vehicleLicensePlate}</span>
+                <span className="text-xs text-gray-400">กำลังใช้งาน</span>
+              </div>
+            )}
+
+            {/* ข้อมูลไมล์ - น้ำมัน & ของเหลว */}
+            {(lastFuelMileage || fluidLatest) && (
+              <div className="grid grid-cols-2 gap-2">
+                {/* เลขไมล์ล่าสุด (น้ำมัน) */}
                 {lastFuelMileage && (
-                  <p className="text-sm text-teal-700">
-                    เลขไมล์ล่าสุด: {lastFuelMileage.toLocaleString()} กม.
-                  </p>
+                  <div className="bg-teal-50 border border-teal-100 rounded-lg p-2.5">
+                    <div className="flex items-center gap-1.5 text-teal-600 mb-1">
+                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 3c2.755 0 5.455.232 8.083.678.533.09.917.556.917 1.096v1.044a2.25 2.25 0 01-.659 1.591l-5.432 5.432a2.25 2.25 0 00-.659 1.591v2.927a2.25 2.25 0 01-1.244 2.013L9.75 21v-6.568a2.25 2.25 0 00-.659-1.591L3.659 7.409A2.25 2.25 0 013 5.818V4.774c0-.54.384-1.006.917-1.096A48.32 48.32 0 0112 3z" />
+                      </svg>
+                      <span className="text-xs font-medium">ไมล์ล่าสุด</span>
+                    </div>
+                    <div className="text-sm font-bold text-teal-700">{lastFuelMileage.toLocaleString()} กม.</div>
+                  </div>
                 )}
-                {/* แสดงรายการเปลี่ยนของเหลวล่าสุด */}
+
+                {/* ของเหลวล่าสุด */}
                 {fluidLatest && (
-                  <div className="text-sm text-blue-700">
-                    <span className="font-semibold">การเปลี่ยนของเหลวล่าสุด:</span> {fluidLatest.mileage ? fluidLatest.mileage.toLocaleString() + ' กม.' : '-'}
-                    {fluidLatest.note && <span className="ml-2 text-gray-500">({fluidLatest.note})</span>}
+                  <div className="bg-blue-50 border border-blue-100 rounded-lg p-2.5">
+                    <div className="flex items-center gap-1.5 text-blue-600 mb-1">
+                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0112 15a9.065 9.065 0 00-6.23.693L5 14.5m14.8.8l1.402 1.402c1.232 1.232.65 3.318-1.067 3.611A48.309 48.309 0 0112 21c-2.773 0-5.491-.235-8.135-.687-1.718-.293-2.3-2.379-1.067-3.61L5 14.5" />
+                      </svg>
+                      <span className="text-xs font-medium">ของเหลว</span>
+                    </div>
+                    <div className="text-sm font-bold text-blue-700">
+                      {fluidLatest.mileage ? fluidLatest.mileage.toLocaleString() + ' กม.' : '-'}
+                    </div>
                   </div>
                 )}
               </div>
@@ -501,59 +519,65 @@ export default function ExpenseLogPage() {
 
             {/* ประเภทค่าใช้จ่าย */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                ประเภทค่าใช้จ่าย <span className="text-red-500">*</span>
+              <label className="block text-xs font-medium text-gray-500 mb-1.5">
+                ประเภท <span className="text-red-400">*</span>
               </label>
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-3 gap-2">
                 <button
                   type="button"
                   onClick={() => setType("fuel")}
-                  className={`p-4 border-2 rounded-lg text-center transition-all ${type === "fuel"
+                  className={`py-2.5 px-2 border rounded-lg text-center transition-all flex flex-col items-center gap-1 ${type === "fuel"
                     ? "border-teal-500 bg-teal-50 text-teal-700"
-                    : "border-gray-300 hover:border-teal-300"
+                    : "border-gray-200 text-gray-600 hover:border-teal-300"
                     }`}
                 >
-                  <div className="text-3xl mb-2">⛽</div>
-                  <div className="text-sm font-medium">เติมน้ำมัน</div>
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 3c2.755 0 5.455.232 8.083.678.533.09.917.556.917 1.096v1.044a2.25 2.25 0 01-.659 1.591l-5.432 5.432a2.25 2.25 0 00-.659 1.591v2.927a2.25 2.25 0 01-1.244 2.013L9.75 21v-6.568a2.25 2.25 0 00-.659-1.591L3.659 7.409A2.25 2.25 0 013 5.818V4.774c0-.54.384-1.006.917-1.096A48.32 48.32 0 0112 3z" />
+                  </svg>
+                  <span className="text-xs font-medium">น้ำมัน</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setType("fluid")}
-                  className={`p-4 border-2 rounded-lg text-center transition-all ${type === "fluid"
+                  className={`py-2.5 px-2 border rounded-lg text-center transition-all flex flex-col items-center gap-1 ${type === "fluid"
                     ? "border-blue-500 bg-blue-50 text-blue-700"
-                    : "border-gray-300 hover:border-blue-300"
+                    : "border-gray-200 text-gray-600 hover:border-blue-300"
                     }`}
                 >
-                  <div className="text-3xl mb-2">🛢️</div>
-                  <div className="text-sm font-medium">ของเหลว</div>
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0112 15a9.065 9.065 0 00-6.23.693L5 14.5m14.8.8l1.402 1.402c1.232 1.232.65 3.318-1.067 3.611A48.309 48.309 0 0112 21c-2.773 0-5.491-.235-8.135-.687-1.718-.293-2.3-2.379-1.067-3.61L5 14.5" />
+                  </svg>
+                  <span className="text-xs font-medium">ของเหลว</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setType("other")}
-                  className={`p-4 border-2 rounded-lg text-center transition-all ${type === "other"
-                    ? "border-teal-500 bg-teal-50 text-teal-700"
-                    : "border-gray-300 hover:border-teal-300"
+                  className={`py-2.5 px-2 border rounded-lg text-center transition-all flex flex-col items-center gap-1 ${type === "other"
+                    ? "border-orange-500 bg-orange-50 text-orange-700"
+                    : "border-gray-200 text-gray-600 hover:border-orange-300"
                     }`}
                 >
-                  <div className="text-3xl mb-2">💰</div>
-                  <div className="text-sm font-medium">อื่นๆ</div>
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18.75a60.07 60.07 0 0115.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 013 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 00-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 01-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 003 15h-.75M15 10.5a3 3 0 11-6 0 3 3 0 016 0zm3 0h.008v.008H18V10.5zm-12 0h.008v.008H6V10.5z" />
+                  </svg>
+                  <span className="text-xs font-medium">อื่นๆ</span>
                 </button>
               </div>
             </div>
 
             {/* จำนวนเงิน */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                จำนวนเงิน (บาท) <span className="text-red-500">*</span>
+              <label className="block text-xs font-medium text-gray-500 mb-1">
+                จำนวนเงิน (บาท) <span className="text-red-400">*</span>
               </label>
               <input
                 type="number"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
-                placeholder="ระบุจำนวนเงิน"
+                placeholder="0.00"
                 step="0.01"
                 min="0"
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
+                className="w-full px-3 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 text-lg font-semibold"
                 required
               />
             </div>
@@ -561,15 +585,15 @@ export default function ExpenseLogPage() {
             {/* ชื่อรายการ (เฉพาะค่าใช้จ่ายอื่นๆ) */}
             {type === "other" && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  ชื่อรายการ <span className="text-red-500">*</span>
+                <label className="block text-xs font-medium text-gray-500 mb-1">
+                  ชื่อรายการ <span className="text-red-400">*</span>
                 </label>
                 <input
                   type="text"
                   value={otherTitle}
                   onChange={e => setOtherTitle(e.target.value)}
-                  placeholder="ระบุชื่อรายการ เช่น ค่าทางด่วน, ค่าซ่อมแซม"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
+                  placeholder="เช่น ค่าทางด่วน, ค่าซ่อมแซม"
+                  className="w-full px-3 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
                   required
                 />
               </div>
@@ -577,46 +601,45 @@ export default function ExpenseLogPage() {
 
             {/* เลขไมล์ (บังคับถ้าเลือกน้ำมัน) */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                เลขไมล์ปัจจุบัน {type === "fuel" && <span className="text-red-500">*</span>}
+              <label className="block text-xs font-medium text-gray-500 mb-1">
+                เลขไมล์ {(type === "fuel" || type === "fluid") && <span className="text-red-400">*</span>}
               </label>
               <div className="flex gap-2">
                 <input
                   type="number"
                   value={mileage}
                   onChange={(e) => setMileage(e.target.value)}
-                  placeholder="ระบุเลขไมล์ปัจจุบัน"
-                  className="w-full max-w-xs px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
+                  placeholder="เลขไมล์ปัจจุบัน"
+                  className="flex-1 px-3 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
                   required={type === "fuel" || type === "fluid"}
                 />
                 <button
                   type="button"
                   onClick={startAutoScan}
                   disabled={isScanning}
-                  className="px-4 py-3 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-all whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
-                  title="แสกนเลขไมล์อัตโนมัติ"
+                  className="px-3 py-2.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
+                  title="แสกนเลขไมล์"
                 >
-                  {isScanning ? '⏳ กำลังแสกน...' : '📷 แสกน'}
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zM18.75 10.5h.008v.008h-.008V10.5z" />
+                  </svg>
+                  <span className="text-sm">{isScanning ? 'กำลังแสกน' : 'แสกน'}</span>
                 </button>
               </div>
-              <p className="text-xs text-gray-500 mt-1">
-                {(type === "fuel") && "บังคับกรอกเมื่อเติมน้ำมัน - กดแสกนเพื่อใช้เลขไมล์จากภาพ"}
-                {(type === "fluid") && "บังคับกรอกเลขไมล์เมื่อเปลี่ยนถ่ายของเหลว"}
-                {(type === "other") && "ไม่บังคับ - บันทึกเพื่อติดตามค่าใช้จ่ายอื่นๆ"}
-              </p>
             </div>
 
             {/* หมายเหตุ */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                หมายเหตุ (ถ้ามี)
+              <label className="block text-xs font-medium text-gray-500 mb-1">
+                หมายเหตุ
               </label>
               <textarea
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
-                placeholder="รายละเอียดเพิ่มเติม เช่น สถานีน้ำมัน, ประเภทน้ำมัน"
-                rows="3"
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 resize-none"
+                placeholder="รายละเอียดเพิ่มเติม (ไม่บังคับ)"
+                rows="2"
+                className="w-full px-3 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 resize-none text-sm"
               />
             </div>
 
@@ -632,9 +655,24 @@ export default function ExpenseLogPage() {
             <button
               type="submit"
               disabled={isSubmitting || !amount || ((type === "fuel" || type === "fluid") && !mileage)}
-              className="w-full py-3 bg-teal-600 text-white rounded-lg font-semibold hover:bg-teal-700 transition-all disabled:bg-gray-400 disabled:cursor-not-allowed"
+              className="w-full py-2.5 bg-teal-600 text-white rounded-lg font-medium text-sm hover:bg-teal-700 transition-all disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
-              {isSubmitting ? 'กำลังบันทึก...' : 'บันทึกค่าใช้จ่าย'}
+              {isSubmitting ? (
+                <>
+                  <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  <span>กำลังบันทึก...</span>
+                </>
+              ) : (
+                <>
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                  <span>บันทึก</span>
+                </>
+              )}
             </button>
           </form>
         </div>

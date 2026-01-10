@@ -1,7 +1,6 @@
 "use client";
 
 import { UserProvider, useUser } from "@/context/UserContext";
-import { DataProvider } from "@/context/DataContext";
 import { useState } from 'react';
 import LiffQueryRouter from '@/components/main/LiffQueryRouter';
 
@@ -132,15 +131,13 @@ function MainLayoutContent({ children }) {
     );
   }
 
-  // User found - render children with DataProvider
+  // User found - render children (DataProvider removed)
   if (user) {
     return (
-      <DataProvider userId={user.uid || user.id}>
-        <div className="min-h-screen bg-gray-50">
-          <LiffQueryRouter />
-          {children}
-        </div>
-      </DataProvider>
+      <div className="min-h-screen bg-gray-50">
+        <LiffQueryRouter />
+        {children}
+      </div>
     );
   }
 

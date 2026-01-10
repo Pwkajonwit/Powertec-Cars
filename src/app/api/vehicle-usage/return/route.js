@@ -1,12 +1,11 @@
 // API: ส่งคืนรถ
 import { NextResponse } from 'next/server';
 import admin from '@/lib/firebaseAdmin';
-import { sendNotificationsForEvent } from '@/lib/notifications';
 
 export async function POST(request) {
   try {
     const body = await request.json();
-  const { usageId, endMileage } = body;
+    const { usageId, endMileage } = body;
 
     // Validate required fields
     if (!usageId) {
@@ -70,7 +69,7 @@ export async function POST(request) {
         .collection('expenses')
         .where('usageId', '==', usageId)
         .get();
-      
+
       expenses = expensesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       totalExpenses = expenses.reduce((sum, exp) => sum + (Number(exp.amount) || 0), 0);
       console.log('Expenses for notification:', { count: expenses.length, totalExpenses });
@@ -78,26 +77,8 @@ export async function POST(request) {
       console.error('Failed to fetch expenses for notification:', expErr);
     }
 
-    // Send notification for vehicle returned
-    try {
-      const notificationData = {
-        id: usageId,
-        userId: usageData.userId,
-        userName: usageData.userName || 'ไม่ระบุชื่อ',
-        vehicleId: usageData.vehicleId,
-        vehicleLicensePlate: usageData.vehicleLicensePlate,
-        startTime: usageData.startTime,
-        endTime: updateUsageData.endTime,
-        totalDistance: totalDistance,
-        totalExpenses: totalExpenses,
-        expenses: expenses
-      };
-      console.log('Sending notification with data:', notificationData);
-      await sendNotificationsForEvent('vehicle_returned', notificationData);
-    } catch (notifErr) {
-      console.error('Failed to send vehicle returned notifications:', notifErr);
-      // Don't fail the request if notification fails
-    }
+    // NOTE: Notification ถูกส่งจาก client ผ่าน liff.sendMessages() แล้ว
+    // ไม่ต้องส่งจาก server อีก เพื่อป้องกันการแจ้งเตือนซ้ำ
 
     return NextResponse.json({
       success: true,

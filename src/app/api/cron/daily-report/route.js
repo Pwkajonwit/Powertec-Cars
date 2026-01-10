@@ -22,7 +22,7 @@ export async function GET(req) {
     // 2. ดึงการตั้งค่าจาก Firestore
     const settingsDoc = await db.collection('appConfig').doc('notifications').get();
     if (!settingsDoc.exists) {
-        return NextResponse.json({ error: 'Settings not found' }, { status: 404 });
+      return NextResponse.json({ error: 'Settings not found' }, { status: 404 });
     }
     const settings = settingsDoc.data();
     const dailySettings = settings?.dailyReport;
@@ -36,7 +36,7 @@ export async function GET(req) {
     const activeUsageSnap = await db.collection('vehicle-usage')
       .where('status', '==', 'active')
       .get();
-    
+
     const activeVehicles = activeUsageSnap.docs.map(doc => doc.data());
 
     // 4. ดึงข้อมูลรถทั้งหมดเพื่อเช็คแจ้งเตือน (Tax, Insurance)
@@ -45,7 +45,7 @@ export async function GET(req) {
 
     // 5. ดึง Expenses เพื่อหาประวัติของเหลว (Fluid)
     const expensesSnap = await db.collection('expenses').where('type', '==', 'fluid').get();
-    const fluidMap = {}; 
+    const fluidMap = {};
     expensesSnap.docs.forEach(doc => {
       const data = doc.data();
       if (data.vehicleId && data.mileage) {
@@ -78,16 +78,19 @@ export async function GET(req) {
       }
       // 6.3 ของเหลว
       // Logic: เตือนเมื่อวิ่งครบ 9,000 กม. ขึ้นไป (เหลืออีก 1,000 กม. จะครบ 10,000 หรือเกินกำหนดแล้ว)
-      const lastFluid = fluidMap[v.id] || 0; // ถ้าไม่มีประวัติ ให้เริ่มที่ 0
-      const currentKm = v.currentMileage || 0;
-      const dist = currentKm - lastFluid; // ระยะทางที่วิ่งไปแล้วตั้งแต่เปลี่ยนครั้งล่าสุด
+      // FIX: ถ้าไม่มีประวัติ (undefined) ให้ข้ามไปก่อน เพื่อป้องกันการแจ้งเตือนผิดพลาดสำหรับรถเก่าที่เพิ่งนำเข้าระบบ
+      if (fluidMap[v.id] !== undefined) {
+        const lastFluid = fluidMap[v.id];
+        const currentKm = v.currentMileage || 0;
+        const dist = currentKm - lastFluid; // ระยะทางที่วิ่งไปแล้วตั้งแต่เปลี่ยนครั้งล่าสุด
 
-      if (dist >= 9000) { 
-        const status = dist >= 10000 
-            ? `เกินกำหนด ${(dist - 10000).toLocaleString()} กม.` 
+        if (dist >= 9000) {
+          const status = dist >= 10000
+            ? `เกินกำหนด ${(dist - 10000).toLocaleString()} กม.`
             : `เหลืออีก ${(10000 - dist).toLocaleString()} กม.`;
-            
-        alerts.push(`🛢️ ของเหลว: ${v.licensePlate} (${status})`);
+
+          alerts.push(`🛢️ ของเหลว: ${v.licensePlate} (${status})`);
+        }
       }
     });
 
@@ -114,7 +117,7 @@ export async function GET(req) {
     // ส่วนที่ 1: รถที่กำลังใช้งาน
     if (activeVehicles.length > 0) {
       flexContents.body.contents.push({ type: "text", text: "🚗 รถที่กำลังใช้งาน", weight: "bold", size: "sm", color: "#333333" });
-      
+
       const activeList = [];
       activeVehicles.forEach(usage => {
         activeList.push({
@@ -136,21 +139,21 @@ export async function GET(req) {
     if (alerts.length > 0) {
       flexContents.body.contents.push({ type: "separator", margin: "lg" });
       flexContents.body.contents.push({ type: "text", text: "🔔 การแจ้งเตือน", weight: "bold", size: "sm", color: "#ef4444", margin: "lg" });
-      
+
       alerts.forEach(alertMsg => {
-        flexContents.body.contents.push({ 
-            type: "text", 
-            text: alertMsg, 
-            size: "xs", 
-            wrap: true, 
-            color: "#b91c1c",
-            margin: "sm"
+        flexContents.body.contents.push({
+          type: "text",
+          text: alertMsg,
+          size: "xs",
+          wrap: true,
+          color: "#b91c1c",
+          margin: "sm"
         });
       });
     } else {
-        // ถ้าไม่มีแจ้งเตือนเลย ให้ใส่ข้อความว่าปกติ
-        flexContents.body.contents.push({ type: "separator", margin: "lg" });
-        flexContents.body.contents.push({ type: "text", text: "✅ สภาพรถปกติดีทุกคัน", size: "xs", color: "#10b981", margin: "lg", align: "center" });
+      // ถ้าไม่มีแจ้งเตือนเลย ให้ใส่ข้อความว่าปกติ
+      flexContents.body.contents.push({ type: "separator", margin: "lg" });
+      flexContents.body.contents.push({ type: "text", text: "✅ สภาพรถปกติดีทุกคัน", size: "xs", color: "#10b981", margin: "lg", align: "center" });
     }
 
     // 8. ส่งข้อความไปหา LINE API
@@ -175,11 +178,11 @@ export async function GET(req) {
       return NextResponse.json({ error: 'ส่ง LINE ไม่ผ่าน', details: text }, { status: 500 });
     }
 
-    return NextResponse.json({ 
-        success: true, 
-        message: 'ส่งรายงานสำเร็จ',
-        recipient: dailySettings.groupId,
-        data: { activeCount: activeVehicles.length, alertCount: alerts.length }
+    return NextResponse.json({
+      success: true,
+      message: 'ส่งรายงานสำเร็จ',
+      recipient: dailySettings.groupId,
+      data: { activeCount: activeVehicles.length, alertCount: alerts.length }
     });
 
   } catch (error) {

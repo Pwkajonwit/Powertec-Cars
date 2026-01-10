@@ -193,7 +193,7 @@ export default function MyTripsPage() {
         return (
             <div className="min-h-screen bg-gray-50">
                 <MainHeader userProfile={user} activeTab={activeTab} setActiveTab={setActiveTab} />
-                <div className="bg-white px-4 py-2 -mt-16">
+                <div className="bg-white px-4 py-2 -mt-8">
                     <div className="text-center py-12">
                         <p className="text-gray-600">กำลังโหลดข้อมูล...</p>
                     </div>
@@ -206,7 +206,7 @@ export default function MyTripsPage() {
         <div className="min-h-screen bg-gray-50">
             <MainHeader userProfile={user} activeTab={activeTab} setActiveTab={setActiveTab} />
 
-            <div className="bg-white px-6 py-2 -mt-16">
+            <div className="bg-white px-4 py-2 -mt-8">
 
                 {usageHistory.length > 0 ? (
                     <div className="pb-8">

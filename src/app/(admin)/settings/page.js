@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { checkAllIndexes } from '@/lib/indexChecker';
+import AlertToast from '@/components/ui/AlertToast';
 
 // --- Icons ---
 const Icons = {
@@ -67,19 +68,35 @@ export default function SettingsPage() {
   const [indexResults, setIndexResults] = useState([]);
   const [showIndexModal, setShowIndexModal] = useState(false);
 
+  // Usage Stats State
+  const [usageStats, setUsageStats] = useState(null);
+  const [loadingUsage, setLoadingUsage] = useState(false);
+
+  // Vehicle Approval Setting
+  const [approvalRequired, setApprovalRequired] = useState(false);
+
+  // Alert State
+  const [alertState, setAlertState] = useState({ show: false, message: '', type: 'success' });
+  const showAlert = (message, type = 'success') => {
+    setAlertState({ show: true, message, type });
+  };
+
   useEffect(() => {
     async function load() {
       try {
         const res = await fetch('/api/notifications/settings');
         const data = await res.json();
-        setNotifSettings(data.roles || {});
 
-        if (data.dailyReport) {
-          setNotifSettings(prev => ({ ...prev, dailyReport: data.dailyReport }));
-        }
+        // โหลดค่าทั้งหมดรวมถึง userChatMessage
+        setNotifSettings({
+          ...(data.roles || {}),
+          dailyReport: data.dailyReport || {},
+          userChatMessage: data.userChatMessage || { vehicle_borrowed: true, vehicle_returned: true }
+        });
 
         setVehicleTypes(data.vehicleTypes || ['รถ SUV', 'รถเก๋ง', 'รถกระบะ', 'รถตู้', 'รถบรรทุก', 'มอเตอร์ไซค์', 'อื่นๆ']);
         setUsageLimits(data.usageLimits || { storageMB: 512, firestoreDocs: 10000 });
+        setApprovalRequired(data.approvalRequired || false);
       } catch (err) {
         console.error('load notif settings', err);
       }
@@ -89,7 +106,7 @@ export default function SettingsPage() {
 
   const handleTestReport = async () => {
     if (!notifSettings?.dailyReport?.groupId) {
-      alert('กรุณากรอก Group ID และบันทึกการตั้งค่าก่อนทำการทดสอบ');
+      showAlert('กรุณากรอก Group ID และบันทึกการตั้งค่าก่อนทำการทดสอบ', 'error');
       return;
     }
 
@@ -103,13 +120,13 @@ export default function SettingsPage() {
       const data = await res.json();
 
       if (res.ok) {
-        alert('ส่งรายงานทดสอบสำเร็จ! กรุณาตรวจสอบในกลุ่ม LINE');
+        showAlert('ส่งรายงานทดสอบสำเร็จ! กรุณาตรวจสอบในกลุ่ม LINE', 'success');
       } else {
-        alert(`การส่งล้มเหลว: ${data.error || 'ไม่ทราบสาเหตุ'}`);
+        showAlert(`การส่งล้มเหลว: ${data.error || 'ไม่ทราบสาเหตุ'}`, 'error');
       }
     } catch (err) {
       console.error(err);
-      alert('เกิดข้อผิดพลาดในการเชื่อมต่อกับเซิร์ฟเวอร์');
+      showAlert('เกิดข้อผิดพลาดในการเชื่อมต่อกับเซิร์ฟเวอร์', 'error');
     } finally {
       setTestingReport(false);
     }
@@ -124,9 +141,11 @@ export default function SettingsPage() {
           driver: notifSettings.driver,
           employee: notifSettings.employee
         },
+        userChatMessage: notifSettings.userChatMessage,
         dailyReport: notifSettings.dailyReport,
         vehicleTypes,
-        usageLimits
+        usageLimits,
+        approvalRequired
       };
 
       await fetch('/api/notifications/settings', {
@@ -135,12 +154,26 @@ export default function SettingsPage() {
         body: JSON.stringify(payload)
       });
 
-      alert('บันทึกการตั้งค่าเรียบร้อย');
+      showAlert('บันทึกการตั้งค่าเรียบร้อย', 'success');
     } catch (err) {
       console.error(err);
-      alert('ไม่สามารถบันทึกได้');
+      showAlert('ไม่สามารถบันทึกได้', 'error');
     } finally {
       setSavingTypes(false);
+    }
+  };
+
+  // โหลดข้อมูลพื้นที่ใช้งาน
+  const fetchUsageStats = async () => {
+    setLoadingUsage(true);
+    try {
+      const res = await fetch('/api/usage');
+      const data = await res.json();
+      setUsageStats(data);
+    } catch (err) {
+      console.error('Error fetching usage:', err);
+    } finally {
+      setLoadingUsage(false);
     }
   };
 
@@ -153,7 +186,8 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+    <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8 relative">
+      <AlertToast show={alertState.show} message={alertState.message} type={alertState.type} onClose={() => setAlertState(prev => ({ ...prev, show: false }))} />
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">ตั้งค่าระบบ</h1>
@@ -187,80 +221,86 @@ export default function SettingsPage() {
             </div>
 
             <div className="p-6 space-y-6">
-              {/* Admin */}
-              <div>
-                <div className="flex items-center gap-2 mb-3">
-                  <Icons.ShieldCheck className="w-4 h-4 text-indigo-500" />
-                  <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">ผู้ดูแลระบบ</h3>
-                </div>
-                <div className="bg-gray-50 rounded-lg p-4 space-y-3">
-                  <ToggleRow
-                    label="เมื่อมีการจองใหม่"
-                    checked={!!notifSettings.admin?.booking_created}
-                    onChange={e => setNotifSettings(s => ({ ...s, admin: { ...s.admin, booking_created: e.target.checked } }))}
-                  />
-                  <ToggleRow
-                    label="เมื่อมีการยืมรถ"
-                    checked={!!notifSettings.admin?.vehicle_borrowed}
-                    onChange={e => setNotifSettings(s => ({ ...s, admin: { ...s.admin, vehicle_borrowed: e.target.checked } }))}
-                  />
-                  <ToggleRow
-                    label="เมื่อมีการคืนรถ"
-                    checked={!!notifSettings.admin?.vehicle_returned}
-                    onChange={e => setNotifSettings(s => ({ ...s, admin: { ...s.admin, vehicle_returned: e.target.checked } }))}
-                  />
-                </div>
+              {/* Info Box */}
+              <div className="p-4 bg-blue-50 border border-blue-100 rounded-lg">
+                <p className="text-sm text-blue-800">
+                  💡 เมื่อยืม/คืนรถ ผู้ใช้จะได้รับข้อความสรุปใน LINE Chat ตามการเปิด/ปิดด้านล่าง
+                </p>
               </div>
 
-              {/* Driver */}
+              {/* User Notification Settings */}
               <div>
                 <div className="flex items-center gap-2 mb-3">
-                  <Icons.User className="w-4 h-4 text-green-500" />
-                  <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">คนขับ</h3>
+                  <Icons.Bell className="w-4 h-4 text-teal-500" />
+                  <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">การแจ้งเตือนผู้ใช้</h3>
                 </div>
                 <div className="bg-gray-50 rounded-lg p-4 space-y-3">
                   <ToggleRow
-                    label="เมื่อมีการจอง"
-                    checked={!!notifSettings.driver?.booking_created}
-                    onChange={e => setNotifSettings(s => ({ ...s, driver: { ...s.driver, booking_created: e.target.checked } }))}
+                    label="แจ้งเตือนเมื่อยืมรถ"
+                    checked={!!notifSettings.userChatMessage?.vehicle_borrowed}
+                    onChange={e => setNotifSettings(s => ({
+                      ...s,
+                      userChatMessage: { ...s.userChatMessage, vehicle_borrowed: e.target.checked }
+                    }))}
                   />
                   <ToggleRow
-                    label="เมื่อยืมรถ"
-                    checked={!!notifSettings.driver?.vehicle_borrowed}
-                    onChange={e => setNotifSettings(s => ({ ...s, driver: { ...s.driver, vehicle_borrowed: e.target.checked } }))}
-                  />
-                  <ToggleRow
-                    label="เมื่อคืนรถ"
-                    checked={!!notifSettings.driver?.vehicle_returned}
-                    onChange={e => setNotifSettings(s => ({ ...s, driver: { ...s.driver, vehicle_returned: e.target.checked } }))}
+                    label="แจ้งเตือนเมื่อคืนรถ"
+                    checked={!!notifSettings.userChatMessage?.vehicle_returned}
+                    onChange={e => setNotifSettings(s => ({
+                      ...s,
+                      userChatMessage: { ...s.userChatMessage, vehicle_returned: e.target.checked }
+                    }))}
                   />
                 </div>
+                <p className="text-xs text-gray-500 mt-2">
+                  เมื่อเปิด ผู้ใช้จะได้รับข้อความ Flex Message ใน LINE Chat ของตัวเอง
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Vehicle Approval System */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+            <div className="p-4 bg-gray-50 border-b border-gray-100 flex items-center gap-2">
+              <Icons.ShieldCheck className="w-5 h-5 text-amber-600" />
+              <h2 className="font-semibold text-gray-800">ระบบอนุมัติการใช้รถ</h2>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <div className="flex items-center justify-between p-4 bg-amber-50 rounded-lg border border-amber-100">
+                <div>
+                  <div className="font-medium text-amber-900">เปิดใช้งานระบบอนุมัติ</div>
+                  <div className="text-xs text-amber-700 mt-1">เมื่อเปิด ผู้ใช้ต้องรอแอดมินอนุมัติก่อนเริ่มใช้รถได้</div>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    className="sr-only peer"
+                    checked={approvalRequired}
+                    onChange={e => setApprovalRequired(e.target.checked)}
+                  />
+                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-amber-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-600"></div>
+                </label>
               </div>
 
-              {/* Employee */}
-              <div>
-                <div className="flex items-center gap-2 mb-3">
-                  <Icons.Users className="w-4 h-4 text-blue-500" />
-                  <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">พนักงาน</h3>
+              {approvalRequired && (
+                <div className="p-3 bg-blue-50 border border-blue-100 rounded-lg">
+                  <p className="text-sm text-blue-800">
+                    ✅ ระบบอนุมัติเปิดใช้งานแล้ว - เมื่อผู้ใช้ขอใช้รถ จะต้องรอแอดมินอนุมัติก่อน
+                  </p>
+                  <p className="text-xs text-blue-600 mt-1">
+                    ไปที่เมนู <strong>"รอการอนุมัติ"</strong> เพื่อดูรายการที่รอการอนุมัติ
+                  </p>
                 </div>
-                <div className="bg-gray-50 rounded-lg p-4 space-y-3">
-                  <ToggleRow
-                    label="เมื่อมีการจอง"
-                    checked={!!notifSettings.employee?.booking_created}
-                    onChange={e => setNotifSettings(s => ({ ...s, employee: { ...s.employee, booking_created: e.target.checked } }))}
-                  />
-                  <ToggleRow
-                    label="เมื่อยืมรถ"
-                    checked={!!notifSettings.employee?.vehicle_borrowed}
-                    onChange={e => setNotifSettings(s => ({ ...s, employee: { ...s.employee, vehicle_borrowed: e.target.checked } }))}
-                  />
-                  <ToggleRow
-                    label="เมื่อคืนรถ"
-                    checked={!!notifSettings.employee?.vehicle_returned}
-                    onChange={e => setNotifSettings(s => ({ ...s, employee: { ...s.employee, vehicle_returned: e.target.checked } }))}
-                  />
+              )}
+
+              {!approvalRequired && (
+                <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                  <p className="text-sm text-gray-700">
+                    ⚡ ผู้ใช้สามารถเริ่มใช้รถได้ทันทีโดยไม่ต้องรอการอนุมัติ
+                  </p>
                 </div>
-              </div>
+              )}
             </div>
           </div>
 
@@ -406,7 +446,7 @@ export default function SettingsPage() {
                     setShowIndexModal(true);
                   } catch (error) {
                     console.error("Error checking indexes:", error);
-                    alert("เกิดข้อผิดพลาดในการตรวจสอบ Indexes");
+                    showAlert("เกิดข้อผิดพลาดในการตรวจสอบ Indexes", 'error');
                   } finally {
                     setCheckingIndexes(false);
                   }
@@ -428,6 +468,124 @@ export default function SettingsPage() {
                   </>
                 )}
               </button>
+            </div>
+          </div>
+
+          {/* Usage Stats */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mt-6">
+            <div className="p-4 bg-gray-50 border-b border-gray-100 flex items-center gap-2">
+              <svg className="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>
+              <h2 className="font-semibold text-gray-800">พื้นที่ใช้งาน Firestore</h2>
+            </div>
+
+            <div className="p-6">
+              <p className="text-sm text-gray-600 mb-4">ตรวจสอบพื้นที่เก็บข้อมูลและจำนวนเอกสารใน Firestore</p>
+
+              <button
+                onClick={fetchUsageStats}
+                disabled={loadingUsage}
+                className="w-full py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 flex items-center justify-center gap-2 mb-4"
+              >
+                {loadingUsage ? (
+                  <>
+                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    กำลังคำนวณ...
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                    </svg>
+                    ตรวจสอบพื้นที่ใช้งาน
+                  </>
+                )}
+              </button>
+
+              {usageStats && (
+                <div className="space-y-4">
+                  {/* Summary */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-center">
+                      <div className="text-2xl font-bold text-blue-700">{usageStats.totalDocuments?.toLocaleString()}</div>
+                      <div className="text-xs text-blue-600">เอกสารทั้งหมด</div>
+                    </div>
+                    <div className="bg-purple-50 border border-purple-200 rounded-lg p-3 text-center">
+                      <div className="text-2xl font-bold text-purple-700">
+                        {usageStats.totalSizeKB > 1024
+                          ? `${(usageStats.totalSizeKB / 1024).toFixed(1)} MB`
+                          : `${usageStats.totalSizeKB} KB`}
+                      </div>
+                      <div className="text-xs text-purple-600">ขนาดโดยประมาณ</div>
+                    </div>
+                  </div>
+
+                  {/* Progress Bars */}
+                  {usageStats.limits && (
+                    <div className="space-y-3">
+                      <div>
+                        <div className="flex justify-between text-xs mb-1">
+                          <span className="text-gray-600">พื้นที่เก็บข้อมูล</span>
+                          <span className={`font-medium ${parseFloat(usageStats.limits.storageUsedPercent) > 80 ? 'text-red-600' : parseFloat(usageStats.limits.storageUsedPercent) > 50 ? 'text-amber-600' : 'text-green-600'}`}>
+                            {usageStats.limits.storageUsedPercent}%
+                          </span>
+                        </div>
+                        <div className="w-full bg-gray-200 rounded-full h-2">
+                          <div
+                            className={`h-2 rounded-full transition-all ${parseFloat(usageStats.limits.storageUsedPercent) > 80 ? 'bg-red-500' : parseFloat(usageStats.limits.storageUsedPercent) > 50 ? 'bg-amber-500' : 'bg-green-500'}`}
+                            style={{ width: `${Math.min(parseFloat(usageStats.limits.storageUsedPercent), 100)}%` }}
+                          ></div>
+                        </div>
+                        <div className="text-xs text-gray-500 mt-1">
+                          จาก 1 GB (Spark Plan)
+                        </div>
+                      </div>
+
+                      <div>
+                        <div className="flex justify-between text-xs mb-1">
+                          <span className="text-gray-600">จำนวนเอกสาร</span>
+                          <span className={`font-medium ${parseFloat(usageStats.limits.documentUsedPercent) > 80 ? 'text-red-600' : parseFloat(usageStats.limits.documentUsedPercent) > 50 ? 'text-amber-600' : 'text-green-600'}`}>
+                            {usageStats.limits.documentUsedPercent}%
+                          </span>
+                        </div>
+                        <div className="w-full bg-gray-200 rounded-full h-2">
+                          <div
+                            className={`h-2 rounded-full transition-all ${parseFloat(usageStats.limits.documentUsedPercent) > 80 ? 'bg-red-500' : parseFloat(usageStats.limits.documentUsedPercent) > 50 ? 'bg-amber-500' : 'bg-green-500'}`}
+                            style={{ width: `${Math.min(parseFloat(usageStats.limits.documentUsedPercent), 100)}%` }}
+                          ></div>
+                        </div>
+                        <div className="text-xs text-gray-500 mt-1">
+                          จาก {usageStats.limits.documentLimit?.toLocaleString()} เอกสาร (โดยประมาณ)
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Collection Breakdown */}
+                  <div className="border border-gray-200 rounded-lg overflow-hidden">
+                    <div className="bg-gray-50 px-3 py-2 text-sm font-medium text-gray-700">รายละเอียดแต่ละ Collection</div>
+                    <div className="divide-y divide-gray-100">
+                      {usageStats.collections && Object.entries(usageStats.collections).map(([name, data]) => (
+                        <div key={name} className="px-3 py-2 flex items-center justify-between text-sm">
+                          <span className="font-medium text-gray-700">{name}</span>
+                          <div className="text-right">
+                            <span className="text-gray-600">{data.documents} docs</span>
+                            {data.imageCount > 0 && (
+                              <span className="text-xs text-purple-600 ml-2">({data.imageCount} รูป)</span>
+                            )}
+                            <span className="text-xs text-gray-400 ml-2">{data.estimatedSizeKB} KB</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <p className="text-xs text-gray-500">
+                    💡 รูปภาพเก็บเป็น base64 ใน Firestore โดยตรง ขนาดโดยประมาณอาจไม่ตรงกับจริง 100%
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -524,10 +682,10 @@ export default function SettingsPage() {
                         <span className="text-xs text-gray-400 ml-2">({result.collection})</span>
                       </div>
                       <span className={`px-2 py-1 rounded text-xs font-medium ${result.status === "ok"
-                          ? "bg-green-100 text-green-700"
-                          : result.status === "missing"
-                            ? "bg-red-100 text-red-700"
-                            : "bg-gray-100 text-gray-700"
+                        ? "bg-green-100 text-green-700"
+                        : result.status === "missing"
+                          ? "bg-red-100 text-red-700"
+                          : "bg-gray-100 text-gray-700"
                         }`}>
                         {result.status === "ok" ? "✓ พร้อม" : result.status === "missing" ? "✕ ต้องสร้าง" : "? ไม่ทราบ"}
                       </span>

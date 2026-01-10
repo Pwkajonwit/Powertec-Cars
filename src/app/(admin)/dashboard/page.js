@@ -208,7 +208,15 @@ export default function AdminDashboardPage() {
                 if (vehicle.insuranceExpireDate && vehicle.insuranceExpireDate <= thirtyDaysFromNow) insuranceAlerts.push({ ...vehicle, currentMileage: latestMileageByVehicle[vehicle.id] || 0 });
 
                 const lastFluidChange = fluidExpensesByVehicle[vehicle.id];
-                const currentMileage = latestMileageByVehicle[vehicle.id] || 0;
+                const currentMileage = vehicle.currentMileage || latestMileageByVehicle[vehicle.id] || 0;
+
+                // Logic:
+                // 1. If we have a record, compare current vs last record.
+                // 2. If NO record, we assume the vehicle is imported "as is" and we don't know the history.
+                //    To avoid false alarms (e.g. car has 100k km but just added to system), we SKIP the alert
+                //    OR we could treat 'currentMileage' as the baseline (dist = 0).
+                //    Here we skip alerting if no history exists to prevent the "Overdue 140,000 km" error.
+
                 if (lastFluidChange) {
                     const mileageSinceLastChange = currentMileage - lastFluidChange.mileage;
                     if (mileageSinceLastChange >= 9000) {
@@ -219,14 +227,8 @@ export default function AdminDashboardPage() {
                             mileageSinceLastChange
                         });
                     }
-                } else if (currentMileage >= 9000) {
-                    fluidChangeAlerts.push({
-                        ...vehicle,
-                        lastFluidMileage: 0,
-                        currentMileage,
-                        mileageSinceLastChange: currentMileage
-                    });
                 }
+                // Removed the else-if that assumed 0 history for high mileage cars
             });
 
             setStats(prev => ({ ...prev, available, inUse, maintenance }));
@@ -262,7 +264,10 @@ export default function AdminDashboardPage() {
             }
         });
 
-        const usageQuery = query(collection(db, "vehicle-usage"));
+        const usageQuery = query(
+            collection(db, "vehicle-usage"),
+            where("status", "==", "completed")
+        );
         const unsubTotalUsage = onSnapshot(usageQuery, (snapshot) => {
             setStats(prev => ({ ...prev, totalUsage: snapshot.size }));
         });
