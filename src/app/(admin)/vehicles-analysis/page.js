@@ -5,6 +5,41 @@ import { collection, query, orderBy, doc, setDoc, onSnapshot } from 'firebase/fi
 import { db } from '@/lib/firebase';
 import AlertToast from '@/components/ui/AlertToast';
 
+// --- Icons ---
+const Icons = {
+  Chart: ({ className = "w-4 h-4" }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.75} stroke="currentColor" className={className}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z" />
+    </svg>
+  ),
+  Car: ({ className = "w-4 h-4" }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.75} stroke="currentColor" className={className}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 18.75a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 0 1-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 0 0-3.213-9.193 2.056 2.056 0 0 0-1.58-.86H14.25M16.5 18.75h-2.25m0-11.177v-.958c0-.568-.422-1.048-.987-1.106a48.554 48.554 0 0 0-10.026 0 1.106 1.106 0 0 0-.987 1.106v7.635m12-6.677v6.677m0 4.5v-4.5m0 0h-12" />
+    </svg>
+  ),
+  Drop: ({ className = "w-4 h-4" }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.75} stroke="currentColor" className={className}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M15.362 5.214A8.252 8.252 0 0 1 12 21 8.25 8.25 0 0 1 6.038 7.048 8.287 8.287 0 0 0 9 9.6a8.983 8.983 0 0 1 3.361-6.867 8.21 8.21 0 0 0 3 2.48Z" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 18a3.75 3.75 0 0 0 .495-7.467 5.99 5.99 0 0 0-1.925 3.546 5.974 5.974 0 0 1-2.133-1.001A3.75 3.75 0 0 0 12 18Z" />
+    </svg>
+  ),
+  Distance: ({ className = "w-4 h-4" }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.75} stroke="currentColor" className={className}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9 6.75V15m6-6v8.25m.503 3.498 4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.252a1.125 1.125 0 0 0-1.006 0L3.622 5.689A1.125 1.125 0 0 0 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0Z" />
+    </svg>
+  ),
+  Coin: ({ className = "w-4 h-4" }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.75} stroke="currentColor" className={className}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m-3-2.818.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+    </svg>
+  ),
+  AlertTriangle: ({ className = "w-4 h-4" }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.75} stroke="currentColor" className={className}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z" />
+    </svg>
+  )
+};
+
 export default function VehiclesAnalysisPage() {
   const [vehicles, setVehicles] = useState([]);
   const [selectedVehicle, setSelectedVehicle] = useState('all');
@@ -21,12 +56,12 @@ export default function VehiclesAnalysisPage() {
     averageFuelEfficiency: 0,
     costPerKm: 0,
   });
-  // ช่องกำหนด threshold
+
+  // Threshold state
   const [threshold, setThreshold] = useState(10);
 
   // Alert State
   const [alertState, setAlertState] = useState({ show: false, message: '', type: 'success' });
-
   const showAlert = (message, type = 'success') => {
     setAlertState({ show: true, message, type });
   };
@@ -36,12 +71,10 @@ export default function VehiclesAnalysisPage() {
   const itemsPerPage = 10;
 
   useEffect(() => {
-    // เรียลไทม์ vehicles
     const unsubVehicles = onSnapshot(collection(db, 'vehicles'), (snapshot) => {
       setVehicles(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     });
 
-    // เรียลไทม์ threshold
     const unsubThreshold = onSnapshot(doc(db, 'settings', 'fuelEfficiencyThreshold'), (docSnap) => {
       if (docSnap.exists()) {
         setThreshold(docSnap.data().value || 10);
@@ -54,209 +87,110 @@ export default function VehiclesAnalysisPage() {
     };
   }, []);
 
-  // Run analysis after vehicles are loaded
+  // Fetch analysis data based on filters
   useEffect(() => {
-    if (vehicles.length > 0) {
-      setSelectedVehicle('all');
-    }
-  }, [vehicles]);
+    if (vehicles.length === 0) return;
 
-  // Always fetch analysis when vehicles are loaded (initial load)
-  useEffect(() => {
-    if (vehicles.length > 0 && selectedVehicle === 'all') {
-      // เรียลไทม์ expenses
-      setLoading(true);
-      const expensesQueryRef = query(collection(db, 'expenses'), orderBy('timestamp', 'desc'));
-      const unsubExpenses = onSnapshot(expensesQueryRef, (expensesSnap) => {
-        let allExpenses = expensesSnap.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data(),
-          timestamp: doc.data().timestamp?.toDate ? doc.data().timestamp.toDate() : new Date(doc.data().timestamp)
-        }));
+    setLoading(true);
+    const expensesQueryRef = query(collection(db, 'expenses'), orderBy('timestamp', 'desc'));
+    const unsubExpenses = onSnapshot(expensesQueryRef, (expensesSnap) => {
+      let allExpenses = expensesSnap.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        timestamp: doc.data().timestamp?.toDate ? doc.data().timestamp.toDate() : new Date(doc.data().timestamp)
+      }));
 
-        const now = new Date();
-        let startDateTime = new Date();
-        let endDateTime = now;
-        switch (dateRange) {
-          case 'today':
-            startDateTime.setHours(0, 0, 0, 0);
-            break;
-          case 'week':
-            startDateTime.setDate(now.getDate() - 7);
-            break;
-          case 'month':
-            startDateTime.setMonth(now.getMonth() - 1);
-            break;
-          case 'custom':
-            if (startDate && endDate) {
-              startDateTime = new Date(startDate);
-              endDateTime = new Date(endDate);
-            }
-            break;
-        }
+      if (selectedVehicle !== 'all') {
+        allExpenses = allExpenses.filter(exp => exp.vehicleId === selectedVehicle);
+      }
 
-        allExpenses = allExpenses.filter(exp => {
-          const expDate = exp.timestamp;
-          return expDate >= startDateTime && expDate <= endDateTime;
-        });
-
-        const fuelExpenses = allExpenses.filter(exp => exp.type === 'fuel' && exp.mileage);
-
-        // คำนวณ fuelRecords แยกรถแต่ละคัน
-        let allFuelRecords = [];
-        vehicles.forEach(vehicle => {
-          const vFuelRecords = fuelExpenses
-            .filter(r => r.vehicleId === vehicle.id && r.mileage !== undefined && r.mileage !== null)
-            .sort((a, b) => a.mileage - b.mileage);
-          vFuelRecords.forEach((exp, index) => {
-            let distanceTraveled = 0;
-            let fuelEfficiency = null;
-            let costPerKm = null;
-            if (index > 0) {
-              const prevExp = vFuelRecords[index - 1];
-              distanceTraveled = exp.mileage - prevExp.mileage;
-
-              // [แก้ไข] ใช้ prevExp.amount (ยอดเติมครั้งก่อน) มาคำนวณ
-              if (distanceTraveled > 0 && prevExp.amount > 0) {
-                fuelEfficiency = (distanceTraveled / prevExp.amount) * 1000;
-                costPerKm = prevExp.amount / distanceTraveled;
-              }
-            }
-            allFuelRecords.push({ ...exp, distanceTraveled, fuelEfficiency, costPerKm });
-          });
-        });
-
-        const validEfficiencies = allFuelRecords.filter(r => r.fuelEfficiency !== null);
-        const avgFuelEfficiency = validEfficiencies.length > 0
-          ? validEfficiencies.reduce((sum, r) => sum + r.fuelEfficiency, 0) / validEfficiencies.length
-          : 0;
-        const totalExpenses = allExpenses.reduce((sum, exp) => sum + (exp.amount || 0), 0);
-        const totalFuelExpenses = fuelExpenses.reduce((sum, exp) => sum + (exp.amount || 0), 0);
-        let totalDistance = vehicles.reduce((sum, v) => {
-          const vStartMileage = v.currentMileage !== undefined && v.currentMileage !== null ? Number(v.currentMileage) : null;
-          const vFuelRecords = fuelExpenses.filter(r => r.vehicleId === v.id && r.mileage !== undefined && r.mileage !== null);
-          if (vFuelRecords.length > 0 && vStartMileage !== null) {
-            const maxMileage = Math.max(...vFuelRecords.map(r => Number(r.mileage)));
-            return sum + (maxMileage - vStartMileage);
+      const now = new Date();
+      let startDateTime = new Date();
+      let endDateTime = now;
+      switch (dateRange) {
+        case 'today':
+          startDateTime.setHours(0, 0, 0, 0);
+          break;
+        case 'week':
+          startDateTime.setDate(now.getDate() - 7);
+          break;
+        case 'month':
+          startDateTime.setMonth(now.getMonth() - 1);
+          break;
+        case 'custom':
+          if (startDate && endDate) {
+            startDateTime = new Date(startDate);
+            endDateTime = new Date(endDate);
+            endDateTime.setHours(23, 59, 59, 999);
           }
-          return sum;
-        }, 0);
-        const totalTrips = allFuelRecords.length;
-        // costPerKm รวม (คิดจาก totalExpenses / totalDistance) อาจจะไม่แม่นยำถ้าระยะทางรวมไม่สัมพันธ์กับ expenses ทั้งหมด
-        // แต่ในที่นี้คง logic เดิมไว้ หรือจะปรับให้ใช้ avg costPerKm ก็ได้
-        const costPerKm = totalDistance > 0 ? totalExpenses / totalDistance : 0;
+          break;
+      }
 
-        setAnalysisData({
-          totalTrips,
-          totalDistance,
-          totalExpenses,
-          totalFuelExpenses,
-          fuelRecords: allFuelRecords.reverse(),
-          averageFuelEfficiency: avgFuelEfficiency,
-          costPerKm,
-        });
-        setLoading(false);
+      allExpenses = allExpenses.filter(exp => {
+        const expDate = exp.timestamp;
+        return expDate >= startDateTime && expDate <= endDateTime;
       });
-      return () => unsubExpenses();
-    }
-  }, [vehicles, selectedVehicle, dateRange, startDate, endDate]);
 
-  useEffect(() => {
-    // เรียลไทม์ expenses เฉพาะเมื่อเลือกคันเดียว
-    if (vehicles.length > 0 && selectedVehicle !== 'all') {
-      setLoading(true);
-      const expensesQueryRef = query(collection(db, 'expenses'), orderBy('timestamp', 'desc'));
-      const unsubExpenses = onSnapshot(expensesQueryRef, (expensesSnap) => {
-        let allExpenses = expensesSnap.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data(),
-          timestamp: doc.data().timestamp?.toDate ? doc.data().timestamp.toDate() : new Date(doc.data().timestamp)
-        }));
+      const fuelExpenses = allExpenses.filter(exp => exp.type === 'fuel' && exp.mileage);
 
-        if (selectedVehicle !== 'all') {
-          allExpenses = allExpenses.filter(exp => exp.vehicleId === selectedVehicle);
-        }
+      let allFuelRecords = [];
+      const targetVehicles = selectedVehicle === 'all' ? vehicles : vehicles.filter(v => v.id === selectedVehicle);
 
-        const now = new Date();
-        let startDateTime = new Date();
-        let endDateTime = now;
-        switch (dateRange) {
-          case 'today':
-            startDateTime.setHours(0, 0, 0, 0);
-            break;
-          case 'week':
-            startDateTime.setDate(now.getDate() - 7);
-            break;
-          case 'month':
-            startDateTime.setMonth(now.getMonth() - 1);
-            break;
-          case 'custom':
-            if (startDate && endDate) {
-              startDateTime = new Date(startDate);
-              endDateTime = new Date(endDate);
-            }
-            break;
-        }
+      targetVehicles.forEach(vehicle => {
+        const vFuelRecords = fuelExpenses
+          .filter(r => r.vehicleId === vehicle.id && r.mileage !== undefined && r.mileage !== null)
+          .sort((a, b) => a.mileage - b.mileage);
 
-        allExpenses = allExpenses.filter(exp => {
-          const expDate = exp.timestamp;
-          return expDate >= startDateTime && expDate <= endDateTime;
-        });
-
-        const fuelExpenses = allExpenses.filter(exp => exp.type === 'fuel' && exp.mileage);
-        const sortedFuelExpenses = [...fuelExpenses].sort((a, b) => a.mileage - b.mileage);
-
-        const fuelRecords = sortedFuelExpenses.map((exp, index) => {
+        vFuelRecords.forEach((exp, index) => {
           let distanceTraveled = 0;
           let fuelEfficiency = null;
           let costPerKm = null;
           if (index > 0) {
-            const prevExp = sortedFuelExpenses[index - 1];
+            const prevExp = vFuelRecords[index - 1];
             distanceTraveled = exp.mileage - prevExp.mileage;
 
-            // [แก้ไข] ใช้ prevExp.amount (ยอดเติมครั้งก่อน) มาคำนวณ
             if (distanceTraveled > 0 && prevExp.amount > 0) {
               fuelEfficiency = (distanceTraveled / prevExp.amount) * 1000;
               costPerKm = prevExp.amount / distanceTraveled;
             }
           }
-          return { ...exp, distanceTraveled, fuelEfficiency, costPerKm };
+          allFuelRecords.push({ ...exp, distanceTraveled, fuelEfficiency, costPerKm });
         });
-
-        const validEfficiencies = fuelRecords.filter(r => r.fuelEfficiency !== null);
-        const avgFuelEfficiency = validEfficiencies.length > 0
-          ? validEfficiencies.reduce((sum, r) => sum + r.fuelEfficiency, 0) / validEfficiencies.length
-          : 0;
-        const totalExpenses = allExpenses.reduce((sum, exp) => sum + (exp.amount || 0), 0);
-        const totalFuelExpenses = fuelExpenses.reduce((sum, exp) => sum + (exp.amount || 0), 0);
-        let totalDistance = 0;
-        let totalTrips = 0;
-        // Use vehicles[].currentMileage as starting mileage, and max mileage from fuel records for selected vehicle
-        const vehicleObj = vehicles.find(v => v.id === selectedVehicle);
-        const startMileage = vehicleObj?.currentMileage !== undefined && vehicleObj?.currentMileage !== null ? Number(vehicleObj.currentMileage) : null;
-        const vehicleFuelRecords = fuelExpenses.filter(r => r.vehicleId === selectedVehicle && r.mileage !== undefined && r.mileage !== null);
-        if (vehicleFuelRecords.length > 0 && startMileage !== null) {
-          const maxMileage = Math.max(...vehicleFuelRecords.map(r => Number(r.mileage)));
-          totalDistance = maxMileage - startMileage;
-        } else {
-          totalDistance = 0;
-        }
-        totalTrips = vehicleFuelRecords.length;
-        const costPerKm = totalDistance > 0 ? totalExpenses / totalDistance : 0;
-
-        setAnalysisData({
-          totalTrips,
-          totalDistance,
-          totalExpenses,
-          totalFuelExpenses,
-          fuelRecords: fuelRecords.reverse(),
-          averageFuelEfficiency: avgFuelEfficiency,
-          costPerKm,
-        });
-        setLoading(false);
       });
-      return () => unsubExpenses();
-    }
+
+      const validEfficiencies = allFuelRecords.filter(r => r.fuelEfficiency !== null);
+      const avgFuelEfficiency = validEfficiencies.length > 0
+        ? validEfficiencies.reduce((sum, r) => sum + r.fuelEfficiency, 0) / validEfficiencies.length
+        : 0;
+      const totalExpenses = allExpenses.reduce((sum, exp) => sum + (exp.amount || 0), 0);
+      const totalFuelExpenses = fuelExpenses.reduce((sum, exp) => sum + (exp.amount || 0), 0);
+
+      let totalDistance = targetVehicles.reduce((sum, v) => {
+        const vStartMileage = v.currentMileage !== undefined && v.currentMileage !== null ? Number(v.currentMileage) : null;
+        const vFuelRecords = fuelExpenses.filter(r => r.vehicleId === v.id && r.mileage !== undefined && r.mileage !== null);
+        if (vFuelRecords.length > 0 && vStartMileage !== null) {
+          const maxMileage = Math.max(...vFuelRecords.map(r => Number(r.mileage)));
+          return sum + Math.max(0, maxMileage - vStartMileage);
+        }
+        return sum;
+      }, 0);
+
+      const totalTrips = allFuelRecords.length;
+      const costPerKm = totalDistance > 0 ? totalExpenses / totalDistance : 0;
+
+      setAnalysisData({
+        totalTrips,
+        totalDistance,
+        totalExpenses,
+        totalFuelExpenses,
+        fuelRecords: allFuelRecords.reverse(),
+        averageFuelEfficiency: avgFuelEfficiency,
+        costPerKm,
+      });
+      setLoading(false);
+    });
+
+    return () => unsubExpenses();
   }, [vehicles, selectedVehicle, dateRange, startDate, endDate]);
 
   const formatDate = (date) => {
@@ -273,92 +207,175 @@ export default function VehiclesAnalysisPage() {
   const saveThreshold = async () => {
     try {
       await setDoc(doc(db, 'settings', 'fuelEfficiencyThreshold'), {
-        value: threshold,
+        value: Number(threshold) || 10,
         updatedAt: new Date()
       });
-      showAlert('บันทึกเกณฑ์เรียบร้อย', 'success');
+      showAlert('บันทึกเกณฑ์ความประหยัดเรียบร้อย', 'success');
     } catch (error) {
       console.error('Error saving threshold:', error);
       showAlert('ไม่สามารถบันทึกเกณฑ์ได้', 'error');
     }
   };
 
-  return (
-    <div className="space-y-6 relative">
-      <AlertToast show={alertState.show} message={alertState.message} type={alertState.type} onClose={() => setAlertState(prev => ({ ...prev, show: false }))} />
-      <h1 className="text-2xl font-bold">วิเคราะห์การใช้รถ</h1>
+  if (loading && vehicles.length === 0) {
+    return (
+      <div className="flex items-center justify-center min-h-[50vh]">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600"></div>
+      </div>
+    );
+  }
 
-      <div className="bg-white rounded-xl shadow p-4">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+  return (
+    <div className="max-w-7xl mx-auto space-y-4">
+      <AlertToast 
+        show={alertState.show} 
+        message={alertState.message} 
+        type={alertState.type} 
+        onClose={() => setAlertState(prev => ({ ...prev, show: false }))} 
+      />
+
+      {/* Header (Compact) */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pb-1">
+        <div>
+          <h1 className="text-xl font-bold text-slate-900 tracking-tight">วิเคราะห์การใช้ยานพาหนะ</h1>
+          <p className="text-slate-600 text-xs mt-0.5 font-normal">
+            สถิติการใช้งาน อัตราสิ้นเปลืองน้ำมัน ต้นทุนต่อกิโลเมตร และแนวโน้มประสิทธิภาพ
+          </p>
+        </div>
+      </div>
+
+      {/* Controls Bar (Filter Bar Height h-9) */}
+      <div className="bg-white rounded-xl shadow-xs border border-slate-200/80 p-3 sm:p-3.5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+          {/* Vehicle Select h-9 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">เลือกรถ</label>
-            <select value={selectedVehicle} onChange={(e) => setSelectedVehicle(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500">
-              <option value="all">รถทั้งหมด</option>
-              {vehicles.map(v => (<option key={v.id} value={v.id}>{v.licensePlate} - {v.brand} {v.model}</option>))}
+            <label className="block text-[11px] font-semibold text-slate-700 mb-1">เลือกยานพาหนะ</label>
+            <select 
+              value={selectedVehicle} 
+              onChange={(e) => { setSelectedVehicle(e.target.value); setCurrentPage(1); }} 
+              className="h-9 w-full px-2.5 text-xs text-slate-800 bg-white border border-slate-300 rounded-lg focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 font-normal cursor-pointer"
+            >
+              <option value="all">รถทั้งหมด ({vehicles.length} คัน)</option>
+              {vehicles.map(v => (
+                <option key={v.id} value={v.id}>{v.licensePlate} - {v.brand} {v.model}</option>
+              ))}
             </select>
           </div>
+
+          {/* Date Range Select h-9 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">เลือกช่วงเวลา</label>
-            <select value={dateRange} onChange={(e) => setDateRange(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500">
+            <label className="block text-[11px] font-semibold text-slate-700 mb-1">ช่วงเวลา</label>
+            <select 
+              value={dateRange} 
+              onChange={(e) => { setDateRange(e.target.value); setCurrentPage(1); }} 
+              className="h-9 w-full px-2.5 text-xs text-slate-800 bg-white border border-slate-300 rounded-lg focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 font-normal cursor-pointer"
+            >
               <option value="today">วันนี้</option>
               <option value="week">7 วันที่ผ่านมา</option>
               <option value="month">30 วันที่ผ่านมา</option>
-              <option value="custom">กำหนดเอง</option>
+              <option value="custom">กำหนดช่วงวันที่เอง</option>
             </select>
           </div>
+
+          {/* Custom Date Pickers h-9 */}
           {dateRange === 'custom' && (
-            <div className="md:col-span-3 grid grid-cols-2 gap-4">
+            <>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">วันที่เริ่มต้น</label>
-                <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500" />
+                <label className="block text-[11px] font-semibold text-slate-700 mb-1">ตั้งแต่วันที่</label>
+                <input 
+                  type="date" 
+                  value={startDate} 
+                  onChange={(e) => { setStartDate(e.target.value); setCurrentPage(1); }} 
+                  className="h-9 w-full px-2.5 text-xs text-slate-800 bg-white border border-slate-300 rounded-lg focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 font-normal cursor-pointer" 
+                />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">วันที่สิ้นสุด</label>
-                <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500" />
+                <label className="block text-[11px] font-semibold text-slate-700 mb-1">ถึงวันที่</label>
+                <input 
+                  type="date" 
+                  value={endDate} 
+                  onChange={(e) => { setEndDate(e.target.value); setCurrentPage(1); }} 
+                  className="h-9 w-full px-2.5 text-xs text-slate-800 bg-white border border-slate-300 rounded-lg focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 font-normal cursor-pointer" 
+                />
               </div>
-            </div>
+            </>
           )}
         </div>
       </div>
 
       {loading ? (
-        <div className="text-center py-12">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">กำลังโหลดข้อมูล...</p>
+        <div className="flex items-center justify-center py-16">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600"></div>
         </div>
       ) : (
         <>
-          {/* Usage Overview Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="bg-white rounded-xl shadow p-4">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-gray-600 text-sm">จำนวนครั้งที่ใช้งาน</span>
+          {/* Summary KPI Cards (Mini-Compact 4-grid) */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="p-3 bg-white rounded-xl shadow-xs border border-slate-200/80 flex items-center justify-between">
+              <div>
+                <p className="text-xs font-normal text-slate-600">จำนวนการเติมน้ำมัน</p>
+                <p className="text-xl font-bold text-slate-900 mt-0.5 font-mono">{analysisData.totalTrips}</p>
+                <p className="text-[10px] text-slate-400 font-normal">ครั้ง</p>
               </div>
-              <div className="text-2xl font-bold text-gray-800">{analysisData.totalTrips}</div>
-              <div className="text-xs text-gray-500 mt-1">ครั้ง</div>
+              <div className="p-2 bg-blue-50 text-blue-700 rounded-lg border border-blue-200/60">
+                <Icons.Drop className="w-4 h-4" />
+              </div>
             </div>
-            <div className="bg-white rounded-xl shadow p-4">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-gray-600 text-sm">ระยะทางรวม</span>
+
+            <div className="p-3 bg-white rounded-xl shadow-xs border border-slate-200/80 flex items-center justify-between">
+              <div>
+                <p className="text-xs font-normal text-slate-600">ระยะทางรวม</p>
+                <p className="text-xl font-bold text-slate-900 mt-0.5 font-mono">{analysisData.totalDistance.toLocaleString()}</p>
+                <p className="text-[10px] text-slate-400 font-normal">กิโลเมตร</p>
               </div>
-              <div className="text-2xl font-bold text-gray-800">{analysisData.totalDistance.toLocaleString()}</div>
-              <div className="text-xs text-gray-500 mt-1">กม.</div>
+              <div className="p-2 bg-emerald-50 text-emerald-700 rounded-lg border border-emerald-200/60">
+                <Icons.Distance className="w-4 h-4" />
+              </div>
             </div>
-            <div className="bg-white rounded-xl shadow p-4">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-gray-600 text-sm">ต้นทุนต่อ กม.</span>
+
+            <div className="p-3 bg-white rounded-xl shadow-xs border border-slate-200/80 flex items-center justify-between">
+              <div>
+                <p className="text-xs font-normal text-slate-600">ค่าวิ่งได้เฉลี่ย</p>
+                <p className="text-xl font-bold text-emerald-800 mt-0.5 font-mono">
+                  {analysisData.averageFuelEfficiency > 0 ? analysisData.averageFuelEfficiency.toFixed(1) : '-'}
+                </p>
+                <p className="text-[10px] text-slate-400 font-normal">กม./1000 บาท</p>
               </div>
-              <div className="text-2xl font-bold text-orange-600">{analysisData.costPerKm.toFixed(2)}</div>
-              <div className="text-xs text-gray-500 mt-1">บาท/กม.</div>
+              <div className="p-2 bg-purple-50 text-purple-700 rounded-lg border border-purple-200/60">
+                <Icons.Chart className="w-4 h-4" />
+              </div>
+            </div>
+
+            <div className="p-3 bg-white rounded-xl shadow-xs border border-slate-200/80 flex items-center justify-between">
+              <div>
+                <p className="text-xs font-normal text-slate-600">ต้นทุนต่อ กม.</p>
+                <p className="text-xl font-bold text-amber-800 mt-0.5 font-mono">
+                  {analysisData.costPerKm.toFixed(2)}
+                </p>
+                <p className="text-[10px] text-slate-400 font-normal">บาท/กม.</p>
+              </div>
+              <div className="p-2 bg-amber-50 text-amber-700 rounded-lg border border-amber-200/60">
+                <Icons.Coin className="w-4 h-4" />
+              </div>
             </div>
           </div>
 
-          {/* รายชื่อรถที่มีอัตราสิ้นเปลืองต่ำกว่า threshold */}
-          <div className="bg-white rounded-xl shadow p-4 sm:p-6 mt-8">
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-4 gap-2">
-              <h2 className="text-lg sm:text-xl font-semibold">รถที่มีค่าวิ่งได้เฉลี่ยต่ำกว่าเกณฑ์</h2>
-              <div className="flex items-center gap-2 flex-wrap">
-                <label htmlFor="threshold" className="text-xs sm:text-sm text-gray-700 whitespace-nowrap">กำหนดเกณฑ์ (กม./1000 บาท):</label>
+          {/* Threshold Warning Section (Compact) */}
+          <div className="bg-white rounded-xl shadow-xs border border-slate-200/80 overflow-hidden">
+            <div className="px-3.5 py-2.5 sm:px-4 sm:py-3 border-b border-slate-200/80 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 bg-slate-50/50">
+              <div className="flex items-center gap-2">
+                <span className="p-1 bg-rose-50 text-rose-700 rounded border border-rose-200">
+                  <Icons.AlertTriangle className="w-4 h-4" />
+                </span>
+                <div>
+                  <h2 className="text-sm font-semibold text-slate-900">รถที่มีค่าวิ่งได้เฉลี่ยต่ำกว่าเกณฑ์</h2>
+                  <p className="text-[11px] text-slate-500 font-normal">รถที่สิ้นเปลืองน้ำมันมากกว่าปกติ ควรตรวจเช็กระบบเครื่องยนต์</p>
+                </div>
+              </div>
+
+              {/* Threshold Setter Controls h-9 */}
+              <div className="flex items-center gap-1.5 self-start sm:self-auto">
+                <label htmlFor="threshold" className="text-xs font-normal text-slate-700 whitespace-nowrap">เกณฑ์ (กม./1000฿):</label>
                 <input
                   id="threshold"
                   type="number"
@@ -366,48 +383,64 @@ export default function VehiclesAnalysisPage() {
                   max="1000"
                   value={threshold}
                   onChange={e => setThreshold(Number(e.target.value))}
-                  className="w-16 sm:w-20 px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-teal-500 text-center text-sm"
+                  className="h-9 w-20 px-2 text-center text-xs font-mono text-slate-800 bg-white border border-slate-300 rounded-lg focus:outline-none focus:border-rose-500 font-normal"
                 />
                 <button
                   onClick={saveThreshold}
-                  className="px-3 py-1 bg-blue-600 text-white text-xs sm:text-sm rounded hover:bg-blue-700 transition"
+                  className="h-9 px-3 bg-slate-800 hover:bg-slate-900 text-white text-xs font-normal rounded-lg transition-colors cursor-pointer shadow-xs"
                 >
                   บันทึก
                 </button>
               </div>
             </div>
-            <div className="overflow-x-auto">
+
+            <div className="p-0">
               {(() => {
-                // Filter vehicles below threshold
                 const filteredVehicles = vehicles.filter(vehicle => {
                   const vFuelRecords = analysisData.fuelRecords.filter(r => r.vehicleId === vehicle.id && r.fuelEfficiency !== null);
                   const avgEff = vFuelRecords.length > 0 ? (vFuelRecords.reduce((sum, r) => sum + r.fuelEfficiency, 0) / vFuelRecords.length) : 0;
                   return avgEff > 0 && avgEff < threshold;
                 });
+
                 if (filteredVehicles.length === 0) {
-                  return <div className="text-center text-gray-500 py-8">ไม่มีรถที่มีค่าวิ่งได้ต่ำกว่า {threshold} กม./1000 บาท</div>;
+                  return (
+                    <div className="text-center text-slate-500 py-6 text-xs font-normal">
+                      ✓ ทุกคันมีอัตราวิ่งได้ผ่านมาตรฐานขั้นต่ำ ({threshold} กม./1000 บาท)
+                    </div>
+                  );
                 }
+
                 return (
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="bg-gray-50">
-                        <th className="px-3 py-2 text-left text-xs sm:text-sm">ทะเบียนรถ</th>
-                        <th className="px-3 py-2 text-left text-xs sm:text-sm hidden sm:table-cell">ยี่ห้อ/รุ่น</th>
-                        <th className="px-3 py-2 text-left text-xs sm:text-sm">ค่าวิ่งได้เฉลี่ย<br className="sm:hidden" /><span className="hidden sm:inline"> (กม./1000 บาท)</span></th>
+                  <table className="min-w-full divide-y divide-slate-200">
+                    <thead className="bg-slate-50/80">
+                      <tr>
+                        <th className="px-3.5 py-2 text-left text-xs font-semibold text-slate-800">ทะเบียนรถ</th>
+                        <th className="px-3.5 py-2 text-left text-xs font-semibold text-slate-800">ยี่ห้อ / รุ่น</th>
+                        <th className="px-3.5 py-2 text-right text-xs font-semibold text-slate-800">ค่าวิ่งได้เฉลี่ย</th>
+                        <th className="px-3.5 py-2 text-right text-xs font-semibold text-slate-800">สถานะการสิ้นเปลือง</th>
                       </tr>
                     </thead>
-                    <tbody>
+                    <tbody className="divide-y divide-slate-100 bg-white">
                       {filteredVehicles.map(vehicle => {
                         const vFuelRecords = analysisData.fuelRecords.filter(r => r.vehicleId === vehicle.id && r.fuelEfficiency !== null);
                         const avgEff = vFuelRecords.length > 0 ? (vFuelRecords.reduce((sum, r) => sum + r.fuelEfficiency, 0) / vFuelRecords.length) : 0;
+
                         return (
-                          <tr key={vehicle.id} className="border-b hover:bg-orange-50">
-                            <td className="px-3 py-2 text-xs sm:text-sm">
-                              <div className="font-bold text-red-600">{vehicle.licensePlate}</div>
-                              <div className="text-gray-600 text-xs sm:hidden mt-1">{vehicle.brand} {vehicle.model}</div>
+                          <tr key={vehicle.id} className="hover:bg-rose-50/40 transition-colors">
+                            <td className="px-3.5 py-2.5 whitespace-nowrap text-xs font-bold text-slate-900 font-mono">
+                              {vehicle.licensePlate}
                             </td>
-                            <td className="px-3 py-2 text-xs sm:text-sm hidden sm:table-cell">{vehicle.brand} {vehicle.model}</td>
-                            <td className="px-3 py-2 text-xs sm:text-sm font-bold">{avgEff > 0 ? avgEff.toFixed(2) : '-'}</td>
+                            <td className="px-3.5 py-2.5 whitespace-nowrap text-xs text-slate-600 font-normal">
+                              {vehicle.brand} {vehicle.model}
+                            </td>
+                            <td className="px-3.5 py-2.5 whitespace-nowrap text-right text-xs font-bold text-rose-700 font-mono">
+                              {avgEff.toFixed(1)} กม./1000฿
+                            </td>
+                            <td className="px-3.5 py-2.5 whitespace-nowrap text-right">
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-normal bg-rose-50 text-rose-800 border border-rose-200">
+                                ต่ำกว่าเกณฑ์ {threshold}
+                              </span>
+                            </td>
                           </tr>
                         );
                       })}
@@ -418,11 +451,14 @@ export default function VehiclesAnalysisPage() {
             </div>
           </div>
 
-          {/* กราฟค่าวิ่งได้ของรถแต่ละคัน - Multi-Line Chart */}
-          <div className="bg-white rounded-xl shadow p-4 sm:p-6">
-            <h2 className="text-lg sm:text-xl font-semibold mb-4">กราฟค่าวิ่งได้รายคัน (1 เดือนที่ผ่านมา)</h2>
+          {/* Fuel Efficiency Chart (Compact Card) */}
+          <div className="bg-white rounded-xl shadow-xs border border-slate-200/80 p-3.5 sm:p-4">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-sm font-semibold text-slate-900">กราฟค่าวิ่งได้รายคัน (กม./1,000 บาท)</h2>
+              <span className="text-[11px] text-slate-500 font-normal">เปรียบเทียบตามช่วงเวลา</span>
+            </div>
+
             {(() => {
-              // เตรียมข้อมูลสำหรับกราฟ
               const chartData = vehicles.map(vehicle => {
                 const vFuelRecords = analysisData.fuelRecords
                   .filter(r => r.vehicleId === vehicle.id && r.fuelEfficiency !== null)
@@ -430,205 +466,172 @@ export default function VehiclesAnalysisPage() {
                 return {
                   vehicle,
                   records: vFuelRecords,
-                  color: `hsl(${Math.random() * 360}, 70%, 50%)`
                 };
               }).filter(v => v.records.length > 0);
 
               if (chartData.length === 0) {
-                return <div className="text-center text-gray-500 py-8">ไม่มีข้อมูลรถ</div>;
+                return (
+                  <div className="text-center text-slate-400 py-12 text-xs font-normal">
+                    ไม่มีข้อมูลการเติมน้ำมันที่เพียงพอสำหรับการสร้างกราฟในช่วงเวลานี้
+                  </div>
+                );
               }
 
-              // หาค่าสูงสุดและต่ำสุดสำหรับ scale
               const allEfficiencies = chartData.flatMap(v => v.records.map(r => r.fuelEfficiency));
               const maxEff = Math.max(...allEfficiencies, 1000);
-              const minEff = Math.min(...allEfficiencies, 0);
-              const chartHeight = 400;
-              const chartPadding = { top: 20, right: 20, bottom: 60, left: 60 };
-              const svgWidth = 1000;
+              const minEff = 0;
+              const chartHeight = 280;
+              const chartPadding = { top: 20, right: 20, bottom: 50, left: 55 };
+              const svgWidth = 900;
 
-              // สร้าง scale สำหรับแกน Y
               const yScale = (value) => {
                 return chartHeight - chartPadding.bottom - ((value - minEff) / (maxEff - minEff)) * (chartHeight - chartPadding.top - chartPadding.bottom);
               };
 
-              // สร้างจุดข้อมูลทั้งหมดเรียงตามวันที่
               const allDates = [...new Set(chartData.flatMap(v =>
-                v.records.map(r => new Date(r.timestamp).toLocaleDateString('th-TH'))
+                v.records.map(r => new Date(r.timestamp).toLocaleDateString('th-TH', { day: '2-digit', month: 'short' }))
               ))].sort();
 
               const xScale = (index) => {
-                return chartPadding.left + (index / (allDates.length - 1 || 1)) * (svgWidth - chartPadding.left - chartPadding.right);
+                return chartPadding.left + (index / (Math.max(1, allDates.length - 1))) * (svgWidth - chartPadding.left - chartPadding.right);
               };
+
+              const colors = [
+                '#059669', '#2563eb', '#d97706', '#dc2626', '#7c3aed',
+                '#db2777', '#0d9488', '#ea580c', '#0891b2', '#65a30d'
+              ];
 
               return (
                 <div className="w-full">
-                  <svg width="100%" height={chartHeight} viewBox={`0 0 ${svgWidth} ${chartHeight}`} preserveAspectRatio="xMidYMid meet" className="mx-auto">
-                    {/* แกน Y */}
-                    <line
-                      x1={chartPadding.left}
-                      y1={chartPadding.top}
-                      x2={chartPadding.left}
-                      y2={chartHeight - chartPadding.bottom}
-                      stroke="#d1d5db"
-                      strokeWidth="2"
-                    />
+                  <div className="overflow-x-auto">
+                    <svg width="100%" height={chartHeight} viewBox={`0 0 ${svgWidth} ${chartHeight}`} preserveAspectRatio="xMidYMid meet" className="mx-auto select-none">
+                      {/* Grid lines & Y labels */}
+                      {[0, 0.25, 0.5, 0.75, 1].map((ratio) => {
+                        const value = minEff + (maxEff - minEff) * ratio;
+                        const y = yScale(value);
+                        return (
+                          <g key={ratio}>
+                            <line
+                              x1={chartPadding.left}
+                              y1={y}
+                              x2={svgWidth - chartPadding.right}
+                              y2={y}
+                              stroke="#e2e8f0"
+                              strokeWidth="1"
+                              strokeDasharray="3 3"
+                            />
+                            <text
+                              x={chartPadding.left - 8}
+                              y={y + 4}
+                              textAnchor="end"
+                              fontSize="11"
+                              fill="#64748b"
+                              fontFamily="monospace"
+                            >
+                              {value.toFixed(0)}
+                            </text>
+                          </g>
+                        );
+                      })}
 
-                    {/* แกน X */}
-                    <line
-                      x1={chartPadding.left}
-                      y1={chartHeight - chartPadding.bottom}
-                      x2={svgWidth - chartPadding.right}
-                      y2={chartHeight - chartPadding.bottom}
-                      stroke="#d1d5db"
-                      strokeWidth="2"
-                    />
-
-                    {/* Grid lines และ Y labels */}
-                    {[0, 0.25, 0.5, 0.75, 1].map((ratio) => {
-                      const value = minEff + (maxEff - minEff) * ratio;
-                      const y = yScale(value);
-                      return (
-                        <g key={ratio}>
+                      {/* Threshold horizontal line */}
+                      {threshold > 0 && threshold <= maxEff && (
+                        <g>
                           <line
                             x1={chartPadding.left}
-                            y1={y}
+                            y1={yScale(threshold)}
                             x2={svgWidth - chartPadding.right}
-                            y2={y}
-                            stroke="#e5e7eb"
-                            strokeWidth="1"
-                            strokeDasharray="4"
+                            y2={yScale(threshold)}
+                            stroke="#f43f5e"
+                            strokeWidth="1.5"
+                            strokeDasharray="4 2"
                           />
                           <text
-                            x={chartPadding.left - 10}
-                            y={y + 5}
+                            x={svgWidth - chartPadding.right}
+                            y={yScale(threshold) - 5}
                             textAnchor="end"
-                            fontSize="12"
-                            fill="#6b7280"
+                            fontSize="10"
+                            fill="#f43f5e"
+                            fontWeight="bold"
                           >
-                            {value.toFixed(0)}
+                            เกณฑ์ ({threshold})
                           </text>
                         </g>
-                      );
-                    })}
+                      )}
 
-                    {/* X labels (วันที่) */}
-                    {allDates.map((date, index) => {
-                      const x = xScale(index);
-                      return (
-                        <text
-                          key={index}
-                          x={x}
-                          y={chartHeight - chartPadding.bottom + 20}
-                          textAnchor="middle"
-                          fontSize="10"
-                          fill="#6b7280"
-                          transform={`rotate(-45, ${x}, ${chartHeight - chartPadding.bottom + 20})`}
-                        >
-                          {date}
-                        </text>
-                      );
-                    })}
+                      {/* X labels (Dates) */}
+                      {allDates.map((date, index) => {
+                        const x = xScale(index);
+                        return (
+                          <text
+                            key={index}
+                            x={x}
+                            y={chartHeight - chartPadding.bottom + 18}
+                            textAnchor="middle"
+                            fontSize="10"
+                            fill="#64748b"
+                            fontFamily="monospace"
+                          >
+                            {date}
+                          </text>
+                        );
+                      })}
 
-                    {/* เส้นกราฟของแต่ละคัน */}
-                    {chartData.map((vehicleData, vIndex) => {
-                      const points = vehicleData.records.map((record, index) => {
-                        const dateStr = new Date(record.timestamp).toLocaleDateString('th-TH');
-                        const dateIndex = allDates.indexOf(dateStr);
-                        const x = xScale(dateIndex);
-                        const y = yScale(record.fuelEfficiency);
-                        return { x, y, record };
-                      });
+                      {/* Lines & Points */}
+                      {chartData.map((vehicleData, vIndex) => {
+                        const points = vehicleData.records.map((record) => {
+                          const dateStr = new Date(record.timestamp).toLocaleDateString('th-TH', { day: '2-digit', month: 'short' });
+                          const dateIndex = allDates.indexOf(dateStr);
+                          const x = xScale(dateIndex);
+                          const y = yScale(record.fuelEfficiency);
+                          return { x, y, record };
+                        });
 
-                      const pathD = points.map((p, i) =>
-                        `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`
-                      ).join(' ');
+                        const pathD = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
+                        const lineColor = colors[vIndex % colors.length];
 
-                      const colors = [
-                        '#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6',
-                        '#ec4899', '#14b8a6', '#f97316', '#06b6d4', '#84cc16'
-                      ];
-                      const lineColor = colors[vIndex % colors.length];
-
-                      return (
-                        <g key={vehicleData.vehicle.id}>
-                          {/* เส้น */}
-                          <path
-                            d={pathD}
-                            fill="none"
-                            stroke={lineColor}
-                            strokeWidth="2"
-                            strokeLinejoin="round"
-                            strokeLinecap="round"
-                          />
-
-                          {/* จุดข้อมูล */}
-                          {points.map((point, pIndex) => (
-                            <g key={pIndex}>
+                        return (
+                          <g key={vehicleData.vehicle.id}>
+                            <path
+                              d={pathD}
+                              fill="none"
+                              stroke={lineColor}
+                              strokeWidth="2"
+                              strokeLinejoin="round"
+                              strokeLinecap="round"
+                            />
+                            {points.map((point, pIndex) => (
                               <circle
+                                key={pIndex}
                                 cx={point.x}
                                 cy={point.y}
-                                r="4"
+                                r="3.5"
                                 fill={lineColor}
                                 stroke="white"
-                                strokeWidth="2"
-                              />
-                              <title>
-                                {vehicleData.vehicle.licensePlate}: {point.record.fuelEfficiency.toFixed(2)} กม./1000฿
-                              </title>
-                            </g>
-                          ))}
-                        </g>
-                      );
-                    })}
+                                strokeWidth="1.5"
+                              >
+                                <title>
+                                  {vehicleData.vehicle.licensePlate}: {point.record.fuelEfficiency.toFixed(1)} กม./1000฿
+                                </title>
+                              </circle>
+                            ))}
+                          </g>
+                        );
+                      })}
+                    </svg>
+                  </div>
 
-                    {/* ป้ายแกน Y */}
-                    <text
-                      x={20}
-                      y={chartHeight / 2}
-                      textAnchor="middle"
-                      fontSize="14"
-                      fill="#374151"
-                      fontWeight="600"
-                      transform={`rotate(-90, 20, ${chartHeight / 2})`}
-                    >
-                      ค่าวิ่งได้ (กม./1000฿)
-                    </text>
-
-                    {/* ป้ายแกน X */}
-                    <text
-                      x={svgWidth / 2}
-                      y={chartHeight - 10}
-                      textAnchor="middle"
-                      fontSize="14"
-                      fill="#374151"
-                      fontWeight="600"
-                    >
-                      วันที่เติมน้ำมัน
-                    </text>
-                  </svg>
-
-                  {/* Legend */}
-                  <div className="flex flex-wrap gap-2 sm:gap-4 justify-center mt-6">
+                  {/* Legend (Pills) */}
+                  <div className="flex flex-wrap gap-1.5 justify-center mt-3 pt-2 border-t border-slate-100">
                     {chartData.map((vehicleData, vIndex) => {
-                      const colors = [
-                        '#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6',
-                        '#ec4899', '#14b8a6', '#f97316', '#06b6d4', '#84cc16'
-                      ];
                       const lineColor = colors[vIndex % colors.length];
                       const avgEff = vehicleData.records.reduce((sum, r) => sum + r.fuelEfficiency, 0) / vehicleData.records.length;
 
                       return (
-                        <div key={vehicleData.vehicle.id} className="flex items-center gap-2">
-                          <div
-                            className="w-3 h-3 sm:w-4 sm:h-4 rounded-full flex-shrink-0"
-                            style={{ backgroundColor: lineColor }}
-                          ></div>
-                          <span className="text-xs sm:text-sm font-medium text-gray-700">
-                            {vehicleData.vehicle.licensePlate}
-                          </span>
-                          <span className="text-xs text-gray-500 hidden sm:inline">
-                            (เฉลี่ย: {avgEff.toFixed(2)} กม./1000฿)
-                          </span>
+                        <div key={vehicleData.vehicle.id} className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-slate-50 border border-slate-200 rounded-md text-xs">
+                          <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: lineColor }}></div>
+                          <span className="font-bold text-slate-900 font-mono text-[11px]">{vehicleData.vehicle.licensePlate}</span>
+                          <span className="text-slate-600 font-mono text-[10px]">({avgEff.toFixed(1)} กม./1000฿)</span>
                         </div>
                       );
                     })}
@@ -638,64 +641,42 @@ export default function VehiclesAnalysisPage() {
             })()}
           </div>
 
-          {/* Fuel Analysis Cards */}
-          <div className="bg-white rounded-xl shadow p-4 sm:p-6">
-            <h2 className="text-lg sm:text-xl font-semibold mb-4">การวิเคราะห์น้ำมัน</h2>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-6">
-              <div className="text-center p-3 sm:p-4 bg-blue-50 rounded-lg">
-                <div className="text-xs sm:text-sm text-gray-600 mb-2">จำนวนครั้งที่เติมน้ำมัน</div>
-                <div className="text-xl sm:text-3xl font-bold text-blue-600">{analysisData.fuelRecords.length}</div>
-                <div className="text-xs text-gray-500 mt-1">ครั้ง</div>
+          {/* Fuel History Table (Compact) */}
+          <div className="bg-white rounded-xl shadow-xs border border-slate-200/80 overflow-hidden">
+            <div className="px-3.5 py-2.5 sm:px-4 sm:py-3 border-b border-slate-200/80 flex items-center justify-between">
+              <div>
+                <h2 className="text-sm font-semibold text-slate-900">ประวัติการเติมน้ำมัน</h2>
+                <p className="text-[11px] text-slate-500 font-normal">รายการบันทึกทั้งหมดในช่วงเวลาที่เลือก</p>
               </div>
-              <div className="text-center p-3 sm:p-4 bg-green-50 rounded-lg">
-                <div className="text-xs sm:text-sm text-gray-600 mb-2">ค่าวิ่งได้เฉลี่ย</div>
-                <div className="text-xl sm:text-3xl font-bold text-green-600">{analysisData.averageFuelEfficiency > 0 ? analysisData.averageFuelEfficiency.toFixed(2) : '-'}</div>
-                <div className="text-xs text-gray-500 mt-1">กม./1000 บาท</div>
-              </div>
-              <div className="text-center p-3 sm:p-4 bg-purple-50 rounded-lg">
-                <div className="text-xs sm:text-sm text-gray-600 mb-2">ค่าน้ำมันรวม</div>
-                <div className="text-xl sm:text-3xl font-bold text-purple-600">{analysisData.totalFuelExpenses.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-                <div className="text-xs text-gray-500 mt-1">บาท</div>
-              </div>
-              <div className="text-center p-3 sm:p-4 bg-orange-50 rounded-lg">
-                <div className="text-xs sm:text-sm text-gray-600 mb-2">เลขไมล์ล่าสุดที่เติมน้ำมัน</div>
-                <div className="text-xl sm:text-3xl font-bold text-orange-600">
-                  {analysisData.fuelRecords.length > 0 ? analysisData.fuelRecords[0].mileage?.toLocaleString() : '-'}
-                </div>
-                <div className="text-xs text-gray-500 mt-1">กม.</div>
-              </div>
-            </div>
-          </div>
-
-          {/* Fuel History Table - Mobile Responsive */}
-          <div className="bg-white rounded-xl shadow overflow-hidden">
-            <div className="p-4 sm:p-6 border-b">
-              <h2 className="text-lg sm:text-xl font-semibold">ประวัติการเติมน้ำมัน</h2>
+              <span className="text-xs font-normal text-slate-700 bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200 font-mono">
+                {analysisData.fuelRecords.length} รายการ
+              </span>
             </div>
 
             {/* Desktop Table View */}
-            <div className="hidden lg:block overflow-x-auto">
-              <table className="w-full">
-                <thead className="bg-gray-50">
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-slate-200">
+                <thead className="bg-slate-50/80">
                   <tr>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">ทะเบียนรถ</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">วันที่เติม</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">เลขไมล์</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">ระยะทางที่วิ่ง</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">จำนวนเงิน</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">ค่าวิ่งได้</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">ต้นทุน/กม.</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">หมายเหตุ</th>
+                    <th className="px-3.5 py-2 text-left text-xs font-semibold text-slate-800">ทะเบียนรถ</th>
+                    <th className="px-3.5 py-2 text-left text-xs font-semibold text-slate-800">วันที่เติม</th>
+                    <th className="px-3.5 py-2 text-right text-xs font-semibold text-slate-800">เลขไมล์</th>
+                    <th className="px-3.5 py-2 text-right text-xs font-semibold text-slate-800">ระยะทางที่วิ่ง</th>
+                    <th className="px-3.5 py-2 text-right text-xs font-semibold text-slate-800">จำนวนเงิน</th>
+                    <th className="px-3.5 py-2 text-right text-xs font-semibold text-slate-800">ค่าวิ่งได้</th>
+                    <th className="px-3.5 py-2 text-right text-xs font-semibold text-slate-800">ต้นทุน/กม.</th>
+                    <th className="px-3.5 py-2 text-left text-xs font-semibold text-slate-800">หมายเหตุ</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-200">
+                <tbody className="divide-y divide-slate-100 bg-white">
                   {analysisData.fuelRecords.length === 0 ? (
                     <tr>
-                      <td colSpan="8" className="px-4 py-8 text-center text-gray-500">ไม่พบข้อมูลการเติมน้ำมันในช่วงเวลานี้</td>
+                      <td colSpan="8" className="px-4 py-8 text-center text-xs text-slate-500 font-normal">
+                        ไม่พบข้อมูลการเติมน้ำมันในช่วงเวลานี้
+                      </td>
                     </tr>
                   ) : (
                     (() => {
-                      const totalPages = Math.ceil(analysisData.fuelRecords.length / itemsPerPage);
                       const startIndex = (currentPage - 1) * itemsPerPage;
                       const endIndex = startIndex + itemsPerPage;
                       const currentRecords = analysisData.fuelRecords.slice(startIndex, endIndex);
@@ -703,15 +684,47 @@ export default function VehiclesAnalysisPage() {
                       return currentRecords.map((record) => {
                         const vehicle = vehicles.find(v => v.id === record.vehicleId);
                         return (
-                          <tr key={record.id} className="hover:bg-gray-50">
-                            <td className="px-4 py-3 text-sm text-gray-900">{vehicle ? vehicle.licensePlate : '-'}</td>
-                            <td className="px-4 py-3 text-sm text-gray-900">{formatDate(record.timestamp)}</td>
-                            <td className="px-4 py-3 text-sm text-gray-900">{record.mileage?.toLocaleString() || '-'} กม.</td>
-                            <td className="px-4 py-3 text-sm text-gray-900">{record.distanceTraveled > 0 ? (<span className="text-teal-600 font-medium">{record.distanceTraveled.toLocaleString()} กม.</span>) : (<span className="text-gray-400">-</span>)}</td>
-                            <td className="px-4 py-3 text-sm text-gray-900">{record.amount.toLocaleString('en-US', { minimumFractionDigits: 2 })} บาท</td>
-                            <td className="px-4 py-3 text-sm">{record.fuelEfficiency !== null ? (<span className={`font-medium ${record.fuelEfficiency > 500 ? 'text-green-600' : record.fuelEfficiency >= 300 ? 'text-yellow-600' : 'text-red-600'}`}>{record.fuelEfficiency.toFixed(2)} กม./1000฿</span>) : (<span className="text-gray-400">-</span>)}</td>
-                            <td className="px-4 py-3 text-sm text-gray-900">{record.costPerKm !== null ? `${record.costPerKm.toFixed(2)} บาท/กม.` : '-'}</td>
-                            <td className="px-4 py-3 text-sm text-gray-500">{record.note || '-'}</td>
+                          <tr key={record.id} className="hover:bg-slate-50/80 transition-colors">
+                            <td className="px-3.5 py-2.5 whitespace-nowrap text-xs font-bold text-slate-900 font-mono">
+                              {vehicle ? vehicle.licensePlate : '-'}
+                            </td>
+                            <td className="px-3.5 py-2.5 whitespace-nowrap text-xs text-slate-700 font-normal">
+                              {formatDate(record.timestamp)}
+                            </td>
+                            <td className="px-3.5 py-2.5 whitespace-nowrap text-right text-xs text-slate-900 font-mono font-normal">
+                              {record.mileage ? `${record.mileage.toLocaleString()} กม.` : '-'}
+                            </td>
+                            <td className="px-3.5 py-2.5 whitespace-nowrap text-right text-xs font-mono font-normal">
+                              {record.distanceTraveled > 0 ? (
+                                <span className="text-emerald-700 font-bold">{record.distanceTraveled.toLocaleString()} กม.</span>
+                              ) : (
+                                <span className="text-slate-400">-</span>
+                              )}
+                            </td>
+                            <td className="px-3.5 py-2.5 whitespace-nowrap text-right text-xs font-bold text-slate-900 font-mono">
+                              {record.amount ? `${Number(record.amount).toLocaleString('en-US', { minimumFractionDigits: 2 })} ฿` : '-'}
+                            </td>
+                            <td className="px-3.5 py-2.5 whitespace-nowrap text-right text-xs font-mono">
+                              {record.fuelEfficiency !== null ? (
+                                <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-normal border ${
+                                  record.fuelEfficiency >= 500 
+                                    ? 'bg-emerald-50 text-emerald-900 border-emerald-200' 
+                                    : record.fuelEfficiency >= 300 
+                                      ? 'bg-amber-50 text-amber-900 border-amber-200' 
+                                      : 'bg-rose-50 text-rose-900 border-rose-200'
+                                }`}>
+                                  {record.fuelEfficiency.toFixed(1)} กม./1000฿
+                                </span>
+                              ) : (
+                                <span className="text-slate-400">-</span>
+                              )}
+                            </td>
+                            <td className="px-3.5 py-2.5 whitespace-nowrap text-right text-xs text-slate-800 font-mono font-normal">
+                              {record.costPerKm !== null ? `${record.costPerKm.toFixed(2)} ฿/กม.` : '-'}
+                            </td>
+                            <td className="px-3.5 py-2.5 text-xs text-slate-500 font-normal truncate max-w-[150px]">
+                              {record.note || '-'}
+                            </td>
                           </tr>
                         );
                       });
@@ -721,146 +734,75 @@ export default function VehiclesAnalysisPage() {
               </table>
             </div>
 
-            {/* Mobile Card View */}
-            <div className="lg:hidden divide-y divide-gray-200">
-              {analysisData.fuelRecords.length === 0 ? (
-                <div className="px-4 py-8 text-center text-gray-500">ไม่พบข้อมูลการเติมน้ำมันในช่วงเวลานี้</div>
-              ) : (
-                (() => {
-                  const totalPages = Math.ceil(analysisData.fuelRecords.length / itemsPerPage);
-                  const startIndex = (currentPage - 1) * itemsPerPage;
-                  const endIndex = startIndex + itemsPerPage;
-                  const currentRecords = analysisData.fuelRecords.slice(startIndex, endIndex);
+            {/* Pagination Controls */}
+            {analysisData.fuelRecords.length > itemsPerPage && (
+              <div className="px-3.5 py-2.5 bg-slate-50/50 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-2">
+                <div className="text-xs text-slate-600 font-normal">
+                  แสดง <span className="font-mono font-semibold text-slate-900">{((currentPage - 1) * itemsPerPage) + 1}</span> ถึง{' '}
+                  <span className="font-mono font-semibold text-slate-900">{Math.min(currentPage * itemsPerPage, analysisData.fuelRecords.length)}</span> จาก{' '}
+                  <span className="font-mono font-bold text-slate-900">{analysisData.fuelRecords.length}</span> รายการ
+                </div>
 
-                  return currentRecords.map((record) => {
-                    const vehicle = vehicles.find(v => v.id === record.vehicleId);
-                    return (
-                      <div key={record.id} className="p-4 hover:bg-gray-50">
-                        <div className="flex justify-between items-start mb-2">
-                          <div>
-                            <div className="font-bold text-gray-900">{vehicle ? vehicle.licensePlate : '-'}</div>
-                            <div className="text-xs text-gray-500 mt-1">{formatDate(record.timestamp)}</div>
-                          </div>
-                          {record.fuelEfficiency !== null && (
-                            <span className={`px-2 py-1 rounded text-xs font-medium ${record.fuelEfficiency > 500 ? 'bg-green-100 text-green-700' : record.fuelEfficiency >= 300 ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'}`}>
-                              {record.fuelEfficiency.toFixed(2)} กม./1000฿
-                            </span>
-                          )}
-                        </div>
-                        <div className="grid grid-cols-2 gap-2 text-sm mt-3">
-                          <div>
-                            <span className="text-gray-500">เลขไมล์:</span>
-                            <span className="ml-1 text-gray-900">{record.mileage?.toLocaleString() || '-'} กม.</span>
-                          </div>
-                          <div>
-                            <span className="text-gray-500">ระยะทาง:</span>
-                            <span className="ml-1 text-gray-900">{record.distanceTraveled > 0 ? `${record.distanceTraveled.toLocaleString()} กม.` : '-'}</span>
-                          </div>
-                          <div>
-                            <span className="text-gray-500">จำนวนเงิน:</span>
-                            <span className="ml-1 text-gray-900 font-medium">{record.amount.toLocaleString('en-US', { minimumFractionDigits: 2 })} ฿</span>
-                          </div>
-                          <div>
-                            <span className="text-gray-500">ต้นทุน/กม.:</span>
-                            <span className="ml-1 text-gray-900">{record.costPerKm !== null ? `${record.costPerKm.toFixed(2)} ฿` : '-'}</span>
-                          </div>
-                        </div>
-                        {record.note && (
-                          <div className="mt-2 text-sm">
-                            <span className="text-gray-500">หมายเหตุ:</span>
-                            <span className="ml-1 text-gray-700">{record.note}</span>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  });
-                })()
-              )}
-            </div>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => setCurrentPage(1)}
+                    disabled={currentPage === 1}
+                    className="h-8 px-2 text-xs font-normal text-slate-700 bg-white border border-slate-300 rounded hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                    title="หน้าแรก"
+                  >
+                    «
+                  </button>
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                    disabled={currentPage === 1}
+                    className="h-8 px-2.5 text-xs font-normal text-slate-700 bg-white border border-slate-300 rounded hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    ก่อนหน้า
+                  </button>
 
-            {/* Pagination */}
-            {analysisData.fuelRecords.length > 0 && (
-              <div className="px-4 sm:px-6 py-4 border-t bg-gray-50">
-                <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
-                  <div className="text-xs sm:text-sm text-gray-600">
-                    แสดง {((currentPage - 1) * itemsPerPage) + 1}-{Math.min(currentPage * itemsPerPage, analysisData.fuelRecords.length)} จาก {analysisData.fuelRecords.length} รายการ
-                  </div>
+                  {/* Compact page buttons */}
+                  {(() => {
+                    const totalPages = Math.ceil(analysisData.fuelRecords.length / itemsPerPage);
+                    let startPage = Math.max(1, currentPage - 1);
+                    let endPage = Math.min(totalPages, startPage + 2);
+                    if (endPage - startPage < 2) {
+                      startPage = Math.max(1, endPage - 2);
+                    }
+                    const pages = [];
+                    for (let i = startPage; i <= endPage; i++) {
+                      if (i > 0) pages.push(i);
+                    }
 
-                  <div className="flex items-center gap-2">
-                    {/* First page button */}
-                    <button
-                      onClick={() => setCurrentPage(1)}
-                      disabled={currentPage === 1}
-                      className="p-2 rounded-lg border border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100 transition-colors"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
-                      </svg>
-                    </button>
+                    return pages.map(pageNum => (
+                      <button
+                        key={pageNum}
+                        onClick={() => setCurrentPage(pageNum)}
+                        className={`h-8 w-8 text-xs rounded transition-colors cursor-pointer ${
+                          currentPage === pageNum
+                            ? 'bg-emerald-600 text-white font-semibold'
+                            : 'bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 font-normal'
+                        }`}
+                      >
+                        {pageNum}
+                      </button>
+                    ));
+                  })()}
 
-                    {/* Previous page button */}
-                    <button
-                      onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                      disabled={currentPage === 1}
-                      className="p-2 rounded-lg border border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100 transition-colors"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                      </svg>
-                    </button>
-
-                    {/* Page numbers (max 3 visible) */}
-                    <div className="hidden sm:flex items-center gap-1">
-                      {(() => {
-                        const totalPages = Math.ceil(analysisData.fuelRecords.length / itemsPerPage);
-                        let startPage = Math.max(1, currentPage - 1);
-                        let endPage = Math.min(totalPages, startPage + 2);
-
-                        if (endPage - startPage < 2) {
-                          startPage = Math.max(1, endPage - 2);
-                        }
-
-                        const pages = [];
-                        for (let i = startPage; i <= endPage; i++) {
-                          pages.push(
-                            <button
-                              key={i}
-                              onClick={() => setCurrentPage(i)}
-                              className={`min-w-[40px] px-3 py-2 rounded-lg border transition-colors ${currentPage === i
-                                ? 'bg-teal-600 text-white border-teal-600'
-                                : 'border-gray-300 hover:bg-gray-100'
-                                }`}
-                            >
-                              {i}
-                            </button>
-                          );
-                        }
-                        return pages;
-                      })()}
-                    </div>
-
-                    {/* Next page button */}
-                    <button
-                      onClick={() => setCurrentPage(prev => Math.min(Math.ceil(analysisData.fuelRecords.length / itemsPerPage), prev + 1))}
-                      disabled={currentPage === Math.ceil(analysisData.fuelRecords.length / itemsPerPage)}
-                      className="p-2 rounded-lg border border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100 transition-colors"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                      </svg>
-                    </button>
-
-                    {/* Last page button */}
-                    <button
-                      onClick={() => setCurrentPage(Math.ceil(analysisData.fuelRecords.length / itemsPerPage))}
-                      disabled={currentPage === Math.ceil(analysisData.fuelRecords.length / itemsPerPage)}
-                      className="p-2 rounded-lg border border-gray-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100 transition-colors"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7" />
-                      </svg>
-                    </button>
-                  </div>
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.min(Math.ceil(analysisData.fuelRecords.length / itemsPerPage), prev + 1))}
+                    disabled={currentPage === Math.ceil(analysisData.fuelRecords.length / itemsPerPage)}
+                    className="h-8 px-2.5 text-xs font-normal text-slate-700 bg-white border border-slate-300 rounded hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    ถัดไป
+                  </button>
+                  <button
+                    onClick={() => setCurrentPage(Math.ceil(analysisData.fuelRecords.length / itemsPerPage))}
+                    disabled={currentPage === Math.ceil(analysisData.fuelRecords.length / itemsPerPage)}
+                    className="h-8 px-2 text-xs font-normal text-slate-700 bg-white border border-slate-300 rounded hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                    title="หน้าสุดท้าย"
+                  >
+                    »
+                  </button>
                 </div>
               </div>
             )}

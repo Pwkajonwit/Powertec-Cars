@@ -111,68 +111,163 @@ export default function AddMaintenanceForm({ vehicleId, onClose, onlyCost = fals
   }, [vehicleId]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-      <div className="w-full max-w-lg p-8 bg-white rounded-lg shadow-2xl">
-        <h2 className="mb-6 text-2xl font-bold">เพิ่มรายการซ่อมบำรุง</h2>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block mb-1 text-sm font-medium">วันที่/เวลา</label>
-            <input type="datetime-local" name="date" value={formData.date} onChange={handleChange} required className="w-full p-2 border rounded"/>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
+      <div className="w-full max-w-lg p-5 bg-white rounded-xl shadow-xl border border-slate-200 space-y-4 max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+          <h2 className="text-base font-bold text-slate-900">
+            {formData.type === "garage" ? "ส่งซ่อมอู่ / ศูนย์บริการ" : "เพิ่มรายการซ่อมบำรุง"}
+          </h2>
+          <button
+            type="button"
+            onClick={onClose}
+            className="text-slate-400 hover:text-slate-600 p-1 rounded-lg text-xs"
+          >
+            ✕
+          </button>
+        </div>
+        <form onSubmit={handleSubmit} className="space-y-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block mb-1 text-xs font-normal text-slate-700">วันที่/เวลา</label>
+              <input
+                type="datetime-local"
+                name="date"
+                value={formData.date}
+                onChange={handleChange}
+                required
+                className="w-full h-9 px-3 text-xs border border-slate-300 rounded-lg bg-white text-slate-900 font-normal focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600"
+              />
+            </div>
+
+            {!onlyCost ? (
+              <div>
+                <label className="block mb-1 text-xs font-normal text-slate-700">ประเภทการแจ้งซ่อม</label>
+                <select
+                  name="type"
+                  value={formData.type}
+                  onChange={handleChange}
+                  className="w-full h-9 px-3 text-xs border border-slate-300 rounded-lg bg-white text-slate-900 font-normal focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600 cursor-pointer"
+                >
+                  <option value="cost-only">แจ้งค่าซ่อม (บันทึกค่าใช้จ่าย)</option>
+                  <option value="garage">ซ่อมอู่ (รอรับ)</option>
+                </select>
+              </div>
+            ) : (
+              <div>
+                <label className="block mb-1 text-xs font-normal text-slate-700">หมวดค่าใช้จ่าย</label>
+                <input
+                  type="text"
+                  disabled
+                  value="บันทึกค่าซ่อมทั่วไป"
+                  className="w-full h-9 px-3 text-xs border border-slate-200 rounded-lg bg-slate-50 text-slate-600 font-normal"
+                />
+              </div>
+            )}
           </div>
 
-          {!onlyCost && (
+          <div>
+            <label className="block mb-1 text-xs font-normal text-slate-700">
+              รายละเอียดการซ่อม <span className="text-rose-500">*</span>
+            </label>
+            <textarea
+              name="details"
+              placeholder="เช่น เปลี่ยนน้ำมันเครื่อง, สลับยาง, ซ่อมระบบเบรก"
+              value={formData.details}
+              onChange={handleChange}
+              required
+              rows={2}
+              className="w-full p-2.5 text-xs border border-slate-300 rounded-lg bg-white text-slate-900 font-normal focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600"
+            />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block mb-1 font-medium">ประเภทการแจ้งซ่อม</label>
-              <select name="type" value={formData.type} onChange={handleChange} className="w-full p-2 border rounded">
-                <option value="cost-only">แจ้งค่าซ่อม (บันทึกค่าใช้จ่าย)</option>
-                <option value="garage">ซ่อมอู่ (รอรับ)</option>
-              </select>
+              <label className="block mb-1 text-xs font-normal text-slate-700">
+                ค่าใช้จ่าย (บาท) <span className="text-rose-500">*</span>
+              </label>
+              <input
+                type="number"
+                name="cost"
+                placeholder="0.00"
+                value={formData.cost}
+                onChange={handleChange}
+                required
+                className="w-full h-9 px-3 text-xs border border-slate-300 rounded-lg bg-white text-slate-900 font-normal font-mono focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600"
+              />
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-xs font-normal text-slate-700">เลขไมล์ (ถ้ามี)</label>
+                {latestMileage !== null && (
+                  <span className="text-[11px] text-slate-500 font-normal">
+                    ล่าสุด: <span className="font-mono text-slate-800">{latestMileage.toLocaleString()}</span> กม.
+                  </span>
+                )}
+              </div>
+              <input
+                type="number"
+                name="mileage"
+                placeholder="เช่น 10500"
+                value={formData.mileage}
+                onChange={handleChange}
+                className="w-full h-9 px-3 text-xs border border-slate-300 rounded-lg bg-white text-slate-900 font-normal font-mono focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600"
+              />
+            </div>
+          </div>
+
+          {formData.type === "garage" && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 bg-amber-50/60 rounded-lg border border-amber-200/80">
+              <div>
+                <label className="block mb-1 text-xs font-normal text-slate-700">ชื่ออู่/ศูนย์บริการ</label>
+                <input
+                  type="text"
+                  name="vendor"
+                  placeholder="ชื่ออู่หรือศูนย์บริการ"
+                  value={formData.vendor}
+                  onChange={handleChange}
+                  className="w-full h-9 px-3 text-xs border border-slate-300 rounded-lg bg-white text-slate-900 font-normal focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600"
+                />
+              </div>
+              <div>
+                <label className="block mb-1 text-xs font-normal text-slate-700">วันที่คาดว่าจะรับคืน</label>
+                <input
+                  type="date"
+                  name="expectedReturnDate"
+                  value={formData.expectedReturnDate}
+                  onChange={handleChange}
+                  className="w-full h-9 px-3 text-xs border border-slate-300 rounded-lg bg-white text-slate-900 font-normal focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600"
+                />
+              </div>
             </div>
           )}
 
-          <div>
-            <label className="block mb-1 text-sm font-medium">รายละเอียดการซ่อม</label>
-            <textarea name="details" placeholder="เช่น เปลี่ยนน้ำมันเครื่อง, สลับยาง" value={formData.details} onChange={handleChange} required className="w-full p-2 border rounded" rows="3"></textarea>
-          </div>
-
-          <div>
-            <label className="block mb-1 text-sm font-medium">ค่าใช้จ่าย (บาท)</label>
-            <input type="number" name="cost" placeholder="0.00" value={formData.cost} onChange={handleChange} required className="w-full p-2 border rounded"/>
-          </div>
-
-          {latestMileage !== null && (
-            <div className="mb-1 text-xs text-gray-500">เลขไมล์ล่าสุด: <span className="font-semibold">{latestMileage}</span></div>
-          )}
-          <div>
-            <label className="block mb-1 text-sm font-medium">เลขไมล์ (ถ้ามี)</label>
-            <input type="number" name="mileage" placeholder="เช่น 10500" value={formData.mileage} onChange={handleChange} className="w-full p-2 border rounded"/>
-          </div>
           {userProfile && (
-            <div className="bg-blue-50 p-3 rounded border border-blue-200">
-              <p className="text-sm text-gray-700">
-                <span className="font-medium">ผู้บันทึก:</span> {userProfile.name || userProfile.email || 'ไม่ระบุ'}
+            <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200">
+              <p className="text-xs text-slate-700 font-normal">
+                ผู้บันทึก: <span className="text-slate-900">{userProfile.name || userProfile.email || "ไม่ระบุ"}</span>
               </p>
             </div>
           )}
 
-          {formData.type === 'garage' && (
-            <div className="space-y-2">
-              <div>
-                <label className="block mb-1 text-sm font-medium">ชื่ออู่/ศูนย์บริการ</label>
-                <input type="text" name="vendor" placeholder="ชื่ออู่" value={formData.vendor} onChange={handleChange} className="w-full p-2 border rounded" />
-              </div>
-              <div>
-                <label className="block mb-1 text-sm font-medium">วันที่คาดว่าจะรับคืน</label>
-                <input type="date" name="expectedReturnDate" value={formData.expectedReturnDate} onChange={handleChange} className="w-full p-2 border rounded" />
-              </div>
-            </div>
-          )}
-          
-          {message && <p className="text-center">{message}</p>}
+          {message && <p className="text-center text-xs font-normal text-rose-600">{message}</p>}
 
-          <div className="flex justify-end gap-4 pt-4">
-            <button type="button" onClick={onClose} disabled={isSubmitting} className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 disabled:opacity-50">ยกเลิก</button>
-            <button type="submit" disabled={isSubmitting} className="px-4 py-2 text-white bg-blue-600 rounded hover:bg-blue-700 disabled:opacity-50">{isSubmitting ? 'กำลังบันทึก...' : 'บันทึก'}</button>
+          <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={isSubmitting}
+              className="h-9 px-3.5 bg-white border border-slate-300 rounded-lg text-xs font-normal text-slate-700 hover:bg-slate-50 disabled:opacity-50 transition-colors cursor-pointer"
+            >
+              ยกเลิก
+            </button>
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="h-9 px-4 text-white bg-emerald-600 rounded-lg text-xs font-normal hover:bg-emerald-700 disabled:opacity-50 transition-colors cursor-pointer"
+            >
+              {isSubmitting ? "กำลังบันทึก..." : "บันทึกข้อมูล"}
+            </button>
           </div>
         </form>
       </div>

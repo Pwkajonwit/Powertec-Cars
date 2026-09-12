@@ -87,46 +87,109 @@ export default function AddFuelLogForm({ vehicleId, currentMileage, onClose }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-      <div className="w-full max-w-lg p-8 bg-white rounded-lg shadow-2xl">
-        <h2 className="mb-6 text-2xl font-bold">⛽ เพิ่มรายการเติมน้ำมัน</h2>
-        <form onSubmit={handleSubmit} className="space-y-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
+      <div className="w-full max-w-md p-5 bg-white rounded-xl shadow-xl border border-slate-200 space-y-4">
+        <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+          <h2 className="text-base font-bold text-slate-900">เพิ่มรายการเติมน้ำมัน</h2>
+          <button
+            type="button"
+            onClick={() => onClose(false)}
+            className="text-slate-400 hover:text-slate-600 p-1 rounded-lg text-xs"
+          >
+            ✕
+          </button>
+        </div>
+        <form onSubmit={handleSubmit} className="space-y-3">
           <div>
-            <label className="block mb-1 text-sm font-medium">วันที่</label>
-            <input type="date" name="date" value={formData.date} onChange={handleChange} required className="w-full p-2 border rounded"/>
+            <label className="block mb-1 text-xs font-normal text-slate-700">วันที่</label>
+            <input
+              type="date"
+              name="date"
+              value={formData.date}
+              onChange={handleChange}
+              required
+              className="w-full h-9 px-3 text-xs border border-slate-300 rounded-lg bg-white text-slate-900 font-normal focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600"
+            />
           </div>
-          
-          {latestMileage !== null && (
-            <div className="mb-1 text-xs text-gray-500">เลขไมล์ล่าสุด: <span className="font-semibold">{latestMileage}</span></div>
-          )}
+
           <div>
-            <label className="block mb-1 text-sm font-medium">เลขไมล์ <span className="text-red-500">*</span></label>
-            <input type="number" name="mileage" placeholder="" value={formData.mileage} onChange={handleChange} required className="w-full p-2 border rounded"/>
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-xs font-normal text-slate-700">
+                เลขไมล์ <span className="text-rose-500">*</span>
+              </label>
+              {latestMileage !== null && (
+                <span className="text-[11px] text-slate-500 font-normal">
+                  ล่าสุด: <span className="font-mono text-slate-800">{latestMileage.toLocaleString()}</span> กม.
+                </span>
+              )}
+            </div>
+            <input
+              type="number"
+              name="mileage"
+              placeholder="เช่น 45000"
+              value={formData.mileage}
+              onChange={handleChange}
+              required
+              className="w-full h-9 px-3 text-xs border border-slate-300 rounded-lg bg-white text-slate-900 font-normal font-mono focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600"
+            />
           </div>
-          
+
           <div>
-            <label className="block mb-1 text-sm font-medium">ราคารวม (บาท) <span className="text-red-500">*</span></label>
-            <input type="number" step="0.01" name="cost" placeholder="0.00" value={formData.cost} onChange={handleChange} required className="w-full p-2 border rounded"/>
+            <label className="block mb-1 text-xs font-normal text-slate-700">
+              ราคารวม (บาท) <span className="text-rose-500">*</span>
+            </label>
+            <input
+              type="number"
+              step="0.01"
+              name="cost"
+              placeholder="0.00"
+              value={formData.cost}
+              onChange={handleChange}
+              required
+              className="w-full h-9 px-3 text-xs border border-slate-300 rounded-lg bg-white text-slate-900 font-normal font-mono focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600"
+            />
           </div>
-          
+
           <div>
-            <label className="block mb-1 text-sm font-medium">หมายเหตุ (ถ้ามี)</label>
-            <input type="text" name="note" placeholder="เช่น เติมที่ปั๊ม Shell" value={formData.note} onChange={handleChange} className="w-full p-2 border rounded"/>
+            <label className="block mb-1 text-xs font-normal text-slate-700">หมายเหตุ (ถ้ามี)</label>
+            <input
+              type="text"
+              name="note"
+              placeholder="เช่น เติมที่ปั๊ม ปตท., ปั๊มบางจาก"
+              value={formData.note}
+              onChange={handleChange}
+              className="w-full h-9 px-3 text-xs border border-slate-300 rounded-lg bg-white text-slate-900 font-normal focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600"
+            />
           </div>
 
           {userProfile && (
-            <div className="bg-blue-50 p-3 rounded border border-blue-200">
-              <p className="text-sm text-gray-700">
-                <span className="font-medium">ผู้บันทึก:</span> {userProfile.name || userProfile.email || 'ไม่ระบุ'}
+            <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200">
+              <p className="text-xs text-slate-700 font-normal">
+                ผู้บันทึก: <span className="text-slate-900">{userProfile.name || userProfile.email || "ไม่ระบุ"}</span>
               </p>
             </div>
           )}
-          
-          {message && <p className="text-center text-sm font-medium">{message}</p>}
-          
-          <div className="flex justify-end gap-4 pt-4">
-            <button type="button" onClick={onClose} disabled={isSubmitting} className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300 disabled:opacity-50">ยกเลิก</button>
-            <button type="submit" disabled={isSubmitting} className="px-4 py-2 text-white bg-green-600 rounded hover:bg-green-700 disabled:opacity-50">{isSubmitting ? 'กำลังบันทึก...' : 'บันทึก'}</button>
+
+          {message && (
+            <p className="text-center text-xs font-normal text-rose-600">{message}</p>
+          )}
+
+          <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+            <button
+              type="button"
+              onClick={() => onClose(false)}
+              disabled={isSubmitting}
+              className="h-9 px-3.5 bg-white border border-slate-300 rounded-lg text-xs font-normal text-slate-700 hover:bg-slate-50 disabled:opacity-50 transition-colors cursor-pointer"
+            >
+              ยกเลิก
+            </button>
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="h-9 px-4 text-white bg-emerald-600 rounded-lg text-xs font-normal hover:bg-emerald-700 disabled:opacity-50 transition-colors cursor-pointer"
+            >
+              {isSubmitting ? "กำลังบันทึก..." : "บันทึกข้อมูล"}
+            </button>
           </div>
         </form>
       </div>

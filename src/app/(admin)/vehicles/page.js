@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { collection, onSnapshot, query } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import Link from "next/link";
@@ -8,51 +8,65 @@ import Image from 'next/image';
 
 // --- Icons ---
 const Icons = {
-  Car: ({ className }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
+  Car: ({ className = "w-4 h-4" }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.75} stroke="currentColor" className={className}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h1.125c.621 0 1.129-.504 1.09-1.124a17.902 17.902 0 00-3.213-9.193 2.056 2.056 0 00-1.58-.86H14.25M16.5 18.75h-2.25m0-11.177v-.958c0-.568-.422-1.048-.987-1.106a48.554 48.554 0 00-10.026 0 1.106 1.106 0 00-.987 1.106v7.635m12-6.677v6.677m0 4.5v-4.5m0 0h-12" />
     </svg>
   ),
-  Plus: ({ className }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
+  Plus: ({ className = "w-3.5 h-3.5" }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className={className}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
     </svg>
   ),
-  PencilSquare: ({ className }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
+  PencilSquare: ({ className = "w-3.5 h-3.5" }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.75} stroke="currentColor" className={className}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487Zm0 0L19.5 7.125" />
     </svg>
   ),
-  Wrench: ({ className }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
+  Wrench: ({ className = "w-3.5 h-3.5" }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.75} stroke="currentColor" className={className}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75" />
     </svg>
   ),
-  BuildingStorefront: ({ className }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 21v-7.5a.75.75 0 01.75-.75h3a.75.75 0 01.75.75V21m-4.5 0H2.36m11.14 0H18m0 0h3.64m-1.39 0V9.349m-16.5 11.65V9.35m0 0a3.001 3.001 0 003.75-.615A2.993 2.993 0 009.75 9.75c.896 0 1.7-.393 2.25-1.016a2.993 2.993 0 002.25 1.016c.896 0 1.7-.393 2.25-1.016a3.001 3.001 0 003.75.614m-16.5 0a3.004 3.004 0 01-.621-4.72L4.318 3.44A1.5 1.5 0 015.378 3h13.243a1.5 1.5 0 011.06.44l1.19 1.189a3 3 0 01-.621 4.72m-13.5 8.65h3.75a.75.75 0 00.75-.75V13.5a.75.75 0 00-.75-.75H6.75a.75.75 0 00-.75.75v3.75c0 .415.336.75.75.75z" />
+  BuildingStorefront: ({ className = "w-3.5 h-3.5" }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.75} stroke="currentColor" className={className}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 21v-7.5a.75.75 0 0 1 .75-.75h3a.75.75 0 0 1 .75.75V21m-4.5 0H2.36m11.14 0H18m0 0h3.64m-1.39 0V9.349m-16.5 11.65V9.35m0 0a3.001 3.001 0 0 0 3.75-.615A2.993 2.993 0 0 0 9.75 9.75c.896 0 1.7-.393 2.25-1.016a2.993 2.993 0 0 0 2.25 1.016c.896 0 1.7-.393 2.25-1.016a3.001 3.001 0 0 0 3.75.614m-16.5 0a3.004 3.004 0 0 1-.621-4.72L4.318 3.44A1.5 1.5 0 0 1 5.378 3h13.243a1.5 1.5 0 0 1 1.06.44l1.19 1.189a3 3 0 0 1-.621 4.72m-13.5 8.65h3.75a.75.75 0 0 0 .75-.75V13.5a.75.75 0 0 0-.75-.75H6.75a.75.75 0 0 0-.75.75v3.75c0 .415.336.75.75.75Z" />
     </svg>
   ),
-  Beaker: ({ className }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0112 15a9.065 9.065 0 00-6.23-.693L5 14.5m14.8.8l1.402 1.402c1.232 1.232.65 3.318-1.067 3.611A48.309 48.309 0 0112 21c-2.773 0-5.491-.235-8.135-.687-1.718-.293-2.3-2.379-1.067-3.61L5 14.5" />
+  Beaker: ({ className = "w-3.5 h-3.5" }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.75} stroke="currentColor" className={className}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 3.104v5.714a2.25 2.25 0 0 1-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 0 1 4.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0 1 12 15a9.065 9.065 0 0 0-6.23-.693L5 14.5m14.8.8 1.402 1.402c1.232 1.232.65 3.318-1.067 3.611A48.309 48.309 0 0 1 12 21c-2.773 0-5.491-.235-8.135-.687-1.718-.293-2.3-2.379-1.067-3.61L5 14.5" />
     </svg>
   ),
-  Drop: ({ className }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M15.362 5.214A8.252 8.252 0 0112 21 8.25 8.25 0 016.038 7.048 8.287 8.287 0 009 9.6a8.983 8.983 0 013.361-6.867 8.21 8.21 0 003 2.48z" />
-      <path strokeLinecap="round" strokeLinejoin="round" d="M12 18a3.75 3.75 0 00.495-7.467 5.99 5.99 0 00-1.925 3.546 5.974 5.974 0 01-2.133-1.001A3.75 3.75 0 0012 18z" />
+  Drop: ({ className = "w-3.5 h-3.5" }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.75} stroke="currentColor" className={className}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M15.362 5.214A8.252 8.252 0 0 1 12 21 8.25 8.25 0 0 1 6.038 7.048 8.287 8.287 0 0 0 9 9.6a8.983 8.983 0 0 1 3.361-6.867 8.21 8.21 0 0 0 3 2.48Z" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 18a3.75 3.75 0 0 0 .495-7.467 5.99 5.99 0 0 0-1.925 3.546 5.974 5.974 0 0 1-2.133-1.001A3.75 3.75 0 0 0 12 18Z" />
     </svg>
   ),
-  User: ({ className }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+  User: ({ className = "w-3.5 h-3.5" }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.75} stroke="currentColor" className={className}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
     </svg>
   ),
-  Tag: ({ className }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.593l6.202-2.073c.827-.276.933-1.357.234-2.056l-9.581-9.581a2.25 2.25 0 00-1.591-.659z" />
-      <path strokeLinecap="round" strokeLinejoin="round" d="M6 6h.008v.008H6V6z" />
+  Search: ({ className = "w-3.5 h-3.5" }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className={className}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
+    </svg>
+  ),
+  Table: ({ className = "w-3.5 h-3.5" }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.75} stroke="currentColor" className={className}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+    </svg>
+  ),
+  Grid: ({ className = "w-3.5 h-3.5" }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.75} stroke="currentColor" className={className}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6A2.25 2.25 0 0 1 6 3.75h2.25A2.25 2.25 0 0 1 10.5 6v2.25a2.25 2.25 0 0 1-2.25 2.25H6a2.25 2.25 0 0 1-2.25-2.25V6ZM3.75 15.75A2.25 2.25 0 0 1 6 13.5h2.25a2.25 2.25 0 0 1 2.25 2.25V18a2.25 2.25 0 0 1-2.25 2.25H6a2.25 2.25 0 0 1 3.75 18v-2.25ZM13.5 6a2.25 2.25 0 0 1 2.25-2.25H18A2.25 2.25 0 0 1 20.25 6v2.25A2.25 2.25 0 0 1 18 10.5h-2.25a2.25 2.25 0 0 1-2.25-2.25V6ZM13.5 15.75a2.25 2.25 0 0 1 2.25-2.25H18a2.25 2.25 0 0 1 2.25 2.25V18A2.25 2.25 0 0 1 18 20.25h-2.25A2.25 2.25 0 0 1 13.5 18v-2.25Z" />
+    </svg>
+  ),
+  CheckCircle: ({ className = "w-4 h-4" }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.75} stroke="currentColor" className={className}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
     </svg>
   )
 };
@@ -61,201 +75,32 @@ const Icons = {
 const getStatusConfig = (status) => {
   switch (status) {
     case "available":
-      return { label: "ว่าง", bg: "bg-emerald-100", text: "text-emerald-700", dot: "bg-emerald-500" };
+      return { label: "ว่างพร้อมใช้", bg: "bg-emerald-50 text-emerald-900 border border-emerald-200", dot: "bg-emerald-500" };
     case "pending":
-      return { label: "รออนุมัติ", bg: "bg-amber-100", text: "text-amber-700", dot: "bg-amber-500" };
+      return { label: "รออนุมัติ", bg: "bg-amber-50 text-amber-900 border border-amber-200", dot: "bg-amber-500" };
     case "in_use":
     case "in-use":
-      return { label: "กำลังใช้", bg: "bg-blue-100", text: "text-blue-700", dot: "bg-blue-500" };
+      return { label: "กำลังใช้งาน", bg: "bg-blue-50 text-blue-900 border border-blue-200", dot: "bg-blue-500" };
     case "on_trip":
     case "on-trip":
-      return { label: "เดินทาง", bg: "bg-indigo-100", text: "text-indigo-700", dot: "bg-indigo-500" };
+      return { label: "กำลังเดินทาง", bg: "bg-indigo-50 text-indigo-900 border border-indigo-200", dot: "bg-indigo-500" };
     case "maintenance":
-      return { label: "ซ่อมบำรุง", bg: "bg-rose-100", text: "text-rose-700", dot: "bg-rose-500" };
+      return { label: "ซ่อมบำรุง", bg: "bg-rose-50 text-rose-900 border border-rose-200", dot: "bg-rose-500" };
     case "retired":
-      return { label: "เลิกใช้", bg: "bg-gray-100", text: "text-gray-600", dot: "bg-gray-500" };
+      return { label: "เลิกใช้งาน", bg: "bg-slate-100 text-slate-800 border border-slate-200", dot: "bg-slate-400" };
     default:
-      return { label: status || "-", bg: "bg-gray-100", text: "text-gray-600", dot: "bg-gray-400" };
+      return { label: status || "-", bg: "bg-slate-100 text-slate-800 border border-slate-200", dot: "bg-slate-400" };
   }
 };
-
-// --- Components ---
-
-function ActionButton({ href, icon: Icon, colorClass, label }) {
-  return (
-    <Link
-      href={href}
-      className="flex flex-col items-center gap-1 group min-w-[50px]"
-    >
-      <div className={`w-9 h-9 flex items-center justify-center rounded-xl transition-all duration-200 group-hover:scale-110 shadow-sm group-hover:shadow-md border border-transparent ${colorClass}`}>
-        <Icon className="w-5 h-5 stroke-[1.5]" />
-      </div>
-      <span className="text-[10px] font-medium text-gray-500 group-hover:text-gray-900 leading-tight text-center">
-        {label}
-      </span>
-    </Link>
-  );
-}
-
-function VehicleTable({ vehicles }) {
-  return (
-    <div className="hidden md:block bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-      <table className="min-w-full divide-y divide-gray-100">
-        <thead>
-          <tr className="bg-gray-50/80">
-            <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider w-[25%]">ยานพาหนะ</th>
-            <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider w-[10%]">สถานะ</th>
-            <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider w-[15%]">ผู้ใช้งาน</th>
-            <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider w-[15%]">ล่าสุด</th>
-            <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">การจัดการ</th>
-          </tr>
-        </thead>
-        <tbody className="bg-white divide-y divide-gray-50">
-          {vehicles.map((vehicle) => {
-            const status = getStatusConfig(vehicle.status);
-            return (
-              <tr key={vehicle.id} className="group hover:bg-gray-50/80 transition-colors duration-150">
-                <td className="px-6 py-4 align-top">
-                  <div className="flex items-start gap-4">
-                    <div className="h-14 w-20 relative rounded-lg overflow-hidden bg-gray-100 flex-shrink-0 shadow-sm border border-gray-100">
-                      {vehicle.imageUrl ? (
-                        <Image src={vehicle.imageUrl} alt={vehicle.model} fill className="object-cover" unoptimized />
-                      ) : (
-                        <div className="flex items-center justify-center h-full w-full text-gray-300">
-                          <Icons.Car className="w-8 h-8" />
-                        </div>
-                      )}
-                    </div>
-                    <div>
-                      <div className="font-semibold text-gray-900">{vehicle.brand} {vehicle.model}</div>
-                      <div className="text-xs text-gray-500 font-medium bg-gray-100 px-2 py-0.5 rounded-md inline-block mt-1">
-                        {vehicle.licensePlate}
-                      </div>
-                    </div>
-                  </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap align-top">
-                  <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${status.bg} ${status.text}`}>
-                    <span className={`w-1.5 h-1.5 rounded-full ${status.dot}`}></span>
-                    {status.label}
-                  </span>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap align-top">
-                  {vehicle.driver || vehicle.driverName ? (
-                    <div className="flex items-center gap-2">
-                      <div className={`w-6 h-6 rounded-full flex items-center justify-center ${vehicle.latestBookingStatus && ['completed', 'finished', 'returned'].includes(vehicle.latestBookingStatus) ? 'bg-gray-50 text-gray-400' : 'bg-indigo-50 text-indigo-600'}`}>
-                        <Icons.User className="w-3.5 h-3.5" />
-                      </div>
-                      <div className="flex flex-col">
-                        <span className={`text-xs font-medium ${vehicle.latestBookingStatus && ['completed', 'finished', 'returned'].includes(vehicle.latestBookingStatus) ? 'text-gray-400' : 'text-gray-900'}`}>
-                          {vehicle.latestBookingStatus && ['completed', 'finished', 'returned'].includes(vehicle.latestBookingStatus) ? 'ล่าสุด: ' : ''}
-                          {vehicle.driver?.displayName || vehicle.driverName}
-                        </span>
-                      </div>
-                    </div>
-                  ) : (
-                    <span className="text-sm text-gray-400 font-light italic">ว่าง</span>
-                  )}
-                </td>
-                <td className="px-6 py-4 align-top">
-                  <div className="flex flex-col gap-1">
-                    {vehicle.latestFuel ? (
-                      <span className="text-xs text-gray-600 flex items-center gap-2">
-                        <Icons.Drop className="w-3.5 h-3.5 text-blue-500" /> {new Date(vehicle.latestFuel.timestamp?.seconds * 1000).toLocaleDateString('th-TH')}
-                      </span>
-                    ) : <span className="text-xs text-gray-400 flex items-center gap-2"><Icons.Drop className="w-3.5 h-3.5 opacity-30" /> -</span>}
-
-                    {vehicle.latestMaintenance ? (
-                      <span className="text-xs text-gray-600 flex items-center gap-2">
-                        <Icons.Wrench className="w-3.5 h-3.5 text-rose-500" /> {new Date(vehicle.latestMaintenance.amount ? Date.now() : 0).toLocaleDateString('th-TH')}
-                      </span>
-                    ) : <span className="text-xs text-gray-400 flex items-center gap-2"><Icons.Wrench className="w-3.5 h-3.5 opacity-30" /> -</span>}
-                  </div>
-                </td>
-                <td className="px-6 py-4 align-top">
-                  <div className="flex flex-wrap gap-2 w-full max-w-[320px]">
-                    <ActionButton href={`/vehicles/${vehicle.id}/edit`} icon={Icons.PencilSquare} colorClass="bg-gray-50 hover:bg-gray-100 text-gray-600 border-gray-200" label="แก้ไข" />
-                    <ActionButton href={`/vehicles/${vehicle.id}/garage`} icon={Icons.BuildingStorefront} colorClass="bg-purple-50 hover:bg-purple-100 text-purple-600 border-purple-100" label="ส่งซ่อม" />
-                    <ActionButton href={`/vehicles/${vehicle.id}/fuel`} icon={Icons.Drop} colorClass="bg-blue-50 hover:bg-blue-100 text-blue-600 border-blue-100" label="เติมน้ำมัน" />
-                    <ActionButton href={`/vehicles/${vehicle.id}/fluid`} icon={Icons.Beaker} colorClass="bg-amber-50 hover:bg-amber-100 text-amber-600 border-amber-100" label="ของเหลว" />
-                    <ActionButton href={`/vehicles/${vehicle.id}/maintenance`} icon={Icons.Wrench} colorClass="bg-rose-50 hover:bg-rose-100 text-rose-600 border-rose-100" label="ซ่อมบำรุง" />
-                  </div>
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-    </div>
-  );
-}
-
-function VehicleCards({ vehicles }) {
-  return (
-    <div className="md:hidden grid grid-cols-1 sm:grid-cols-2 gap-4">
-      {vehicles.map((vehicle) => {
-        const status = getStatusConfig(vehicle.status);
-        return (
-          <div key={vehicle.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 transition-shadow hover:shadow-md">
-            <div className="flex gap-4">
-              <div className="h-20 w-24 relative rounded-xl overflow-hidden bg-gray-50 flex-shrink-0 border border-gray-100">
-                {vehicle.imageUrl ? (
-                  <Image src={vehicle.imageUrl} alt={vehicle.model} fill className="object-cover" unoptimized />
-                ) : (
-                  <div className="flex items-center justify-center h-full w-full text-gray-300">
-                    <Icons.Car className="w-8 h-8" />
-                  </div>
-                )}
-              </div>
-              <div className="flex-1 min-w-0 flex flex-col justify-between">
-                <div>
-                  <div className="flex justify-between items-start">
-                    <h3 className="font-bold text-gray-900 truncate pr-2">{vehicle.brand} {vehicle.model}</h3>
-                    <span className={`flex-shrink-0 w-2 h-2 rounded-full ${status.dot}`} title={status.label}></span>
-                  </div>
-                  <div className="text-xs text-gray-500 font-medium bg-gray-100 px-2 py-0.5 rounded-md inline-block mt-1">
-                    {vehicle.licensePlate}
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-1.5 mt-2">
-                  {vehicle.driver || vehicle.driverName ? (
-                    <>
-                      <div className={`w-4 h-4 rounded-full flex items-center justify-center ${vehicle.latestBookingStatus && ['completed', 'finished', 'returned'].includes(vehicle.latestBookingStatus) ? 'bg-gray-50 text-gray-400' : 'bg-indigo-50 text-indigo-600'}`}>
-                        <Icons.User className="w-2.5 h-2.5" />
-                      </div>
-                      <span className={`text-xs truncate max-w-[120px] ${vehicle.latestBookingStatus && ['completed', 'finished', 'returned'].includes(vehicle.latestBookingStatus) ? 'text-gray-400' : 'text-gray-900 font-medium'}`}>
-                        {vehicle.latestBookingStatus && ['completed', 'finished', 'returned'].includes(vehicle.latestBookingStatus) ? 'ล่าสุด: ' : ''}
-                        {vehicle.driver?.displayName || vehicle.driverName}
-                      </span>
-                    </>
-                  ) : (
-                    <span className="text-xs text-emerald-600 font-medium">ว่างพร้อมใช้</span>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-4 pt-4 border-t border-gray-50">
-              <div className="flex items-center justify-between gap-2">
-                <ActionButton href={`/vehicles/${vehicle.id}/edit`} icon={Icons.PencilSquare} colorClass="bg-gray-50 text-gray-500 hover:bg-gray-100 hover:text-gray-700" label="แก้ไข" />
-                <div className="h-4 w-px bg-gray-200"></div>
-                <ActionButton href={`/vehicles/${vehicle.id}/garage`} icon={Icons.BuildingStorefront} colorClass="bg-purple-50 text-purple-600 hover:bg-purple-100 hover:text-purple-700" label="อู่" />
-                <ActionButton href={`/vehicles/${vehicle.id}/fuel`} icon={Icons.Drop} colorClass="bg-blue-50 text-blue-600 hover:bg-blue-100 hover:text-blue-700" label="น้ำมัน" />
-                <ActionButton href={`/vehicles/${vehicle.id}/fluid`} icon={Icons.Beaker} colorClass="bg-orange-50 text-orange-600 hover:bg-orange-100 hover:text-orange-700" label="ของเหลว" />
-                <ActionButton href={`/vehicles/${vehicle.id}/maintenance`} icon={Icons.Wrench} colorClass="bg-red-50 text-rose-600 hover:bg-red-100 hover:text-rose-700" label="ซ่อม" />
-              </div>
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
 
 export default function VehiclesPage() {
   const [vehicles, setVehicles] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // Filters State (Height h-9 controls)
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [viewMode, setViewMode] = useState('table'); // 'table' | 'cards'
 
   useEffect(() => {
     const q = query(collection(db, "vehicles"));
@@ -281,15 +126,11 @@ export default function VehiclesPage() {
             const fr = await import('firebase/firestore');
             const { collection: col, query: qfn, where, orderBy, limit, getDocs } = fr;
             const bookingsRef = col(db, 'bookings');
-            // Fetch latest booking regardless of status (active or history) to show "Latest User"
-            // We filter by status to exclude cancelled/rejected if possible, 
-            // but for "User column will show latest user", we usually mean valid usage.
-            // Firestore 'in' limit is 10.
             const bq = qfn(bookingsRef, where('vehicleId', '==', v.id), where('status', 'in', ['approved', 'in_use', 'on_trip', 'completed', 'finished', 'returned']), orderBy('createdAt', 'desc'), limit(1));
             const bSnap = await getDocs(bq);
             if (!bSnap.empty) {
               const bd = bSnap.docs[0].data();
-              v.latestBookingStatus = bd.status; // Store status to check if active or past
+              v.latestBookingStatus = bd.status;
 
               if (bd.driverId) {
                 try {
@@ -315,28 +156,28 @@ export default function VehiclesPage() {
             const fuelQ = qfn(expensesRef, where('vehicleId', '==', v.id), where('type', '==', 'fuel'));
             const fuelSnap = await getDocs(fuelQ);
             if (!fuelSnap.empty) {
-              const fuelDocs = fuelSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })).sort((a, b) => {
+              const fuelDocs = fuelSnap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => {
                 const aTime = a.timestamp?.toDate ? a.timestamp.toDate() : new Date(a.timestamp);
                 const bTime = b.timestamp?.toDate ? b.timestamp.toDate() : new Date(b.timestamp);
                 return bTime - aTime;
               });
               v.latestFuel = fuelDocs[0];
             }
-          } catch (e) { console.error(`[ERROR] Failed to fetch fuel for vehicle ${v.id}:`, e.message); }
+          } catch (e) {}
 
           // Fluid
           try {
             const fluidQ = qfn(expensesRef, where('vehicleId', '==', v.id), where('type', '==', 'fluid'));
             const fluidSnap = await getDocs(fluidQ);
             if (!fluidSnap.empty) {
-              const fluidDocs = fluidSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })).sort((a, b) => {
+              const fluidDocs = fluidSnap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => {
                 const aTime = a.timestamp?.toDate ? a.timestamp.toDate() : new Date(a.timestamp);
                 const bTime = b.timestamp?.toDate ? b.timestamp.toDate() : new Date(b.timestamp);
                 return bTime - aTime;
               });
               v.latestFluid = fluidDocs[0];
             }
-          } catch (e) { console.error(`[ERROR] Failed to fetch fluid for vehicle ${v.id}:`, e.message); }
+          } catch (e) {}
 
           // Maintenance
           try {
@@ -344,7 +185,7 @@ export default function VehiclesPage() {
             const maintenanceQ = qfn(maintenancesRef, where('vehicleId', '==', v.id));
             const maintenanceSnap = await getDocs(maintenanceQ);
             if (!maintenanceSnap.empty) {
-              const maintenanceDocs = maintenanceSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })).sort((a, b) => {
+              const maintenanceDocs = maintenanceSnap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => {
                 const aTime = a.receivedAt?.toDate ? a.receivedAt.toDate() : (a.createdAt?.toDate ? a.createdAt.toDate() : new Date(a.createdAt || 0));
                 const bTime = b.receivedAt?.toDate ? b.receivedAt.toDate() : (b.createdAt?.toDate ? b.createdAt.toDate() : new Date(b.createdAt || 0));
                 return bTime - aTime;
@@ -352,8 +193,8 @@ export default function VehiclesPage() {
               const latest = maintenanceDocs[0];
               v.latestMaintenance = { mileage: latest.finalMileage || latest.odometerAtDropOff || null, amount: latest.finalCost || null, note: latest.type || latest.details || null };
             }
-          } catch (e) { console.error(`[ERROR] Failed to fetch maintenance for vehicle ${v.id}:`, e.message); }
-        } catch (e) { console.error('[ERROR] Failed to import firestore:', e); }
+          } catch (e) {}
+        } catch (e) {}
 
         return v;
       }));
@@ -365,40 +206,468 @@ export default function VehiclesPage() {
     return () => unsubscribe();
   }, []);
 
+  // Filter vehicles
+  const filteredVehicles = useMemo(() => {
+    return vehicles.filter(vehicle => {
+      if (statusFilter) {
+        if (statusFilter === 'in_use' && !['in_use', 'in-use', 'on_trip', 'on-trip', 'pending'].includes(vehicle.status)) return false;
+        else if (statusFilter !== 'in_use' && vehicle.status !== statusFilter) return false;
+      }
+
+      if (searchQuery) {
+        const q = searchQuery.toLowerCase().trim();
+        const plate = (vehicle.licensePlate || '').toLowerCase();
+        const brand = (vehicle.brand || '').toLowerCase();
+        const model = (vehicle.model || '').toLowerCase();
+        const type = (vehicle.type || '').toLowerCase();
+        const driverName = (vehicle.driver?.displayName || vehicle.driver?.name || vehicle.driverName || '').toLowerCase();
+
+        return plate.includes(q) || brand.includes(q) || model.includes(q) || type.includes(q) || driverName.includes(q);
+      }
+
+      return true;
+    });
+  }, [vehicles, statusFilter, searchQuery]);
+
+  // Summary counts
+  const availableCount = useMemo(() => vehicles.filter(v => v.status === 'available').length, [vehicles]);
+  const inUseCount = useMemo(() => vehicles.filter(v => ['in_use', 'in-use', 'on_trip', 'on-trip', 'pending'].includes(v.status)).length, [vehicles]);
+  const maintenanceCount = useMemo(() => vehicles.filter(v => v.status === 'maintenance').length, [vehicles]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[50vh]">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600"></div>
+      </div>
+    );
+  }
+
   return (
-    <div className="max-w-7xl mx-auto">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+    <div className="max-w-7xl mx-auto space-y-4">
+      {/* Header (Compact) */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-1">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">ยานพาหนะ</h1>
-          <p className="text-gray-500 text-sm mt-1">จัดการข้อมูลรถและประวัติการซ่อมบำรุง</p>
+          <h1 className="text-xl font-bold text-slate-900 tracking-tight">ยานพาหนะ</h1>
+          <p className="text-slate-600 text-xs mt-0.5 font-normal">
+            จัดการข้อมูลรถ ทะเบียน ประวัติการเติมน้ำมัน และการส่งซ่อมบำรุง
+          </p>
         </div>
         <Link
           href="/vehicles/add"
-          className="inline-flex items-center justify-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium shadow-sm"
+          className="h-9 px-3.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-normal shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer self-start sm:self-auto"
         >
-          <Icons.Plus className="w-5 h-5 mr-1.5" />
-          เพิ่มรถใหม่
+          <Icons.Plus className="w-3.5 h-3.5" />
+          <span>เพิ่มรถใหม่</span>
         </Link>
       </div>
 
-      {loading ? (
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-600"></div>
-        </div>
-      ) : vehicles.length === 0 ? (
-        <div className="text-center py-12 bg-white rounded-xl border border-gray-100 shadow-sm">
-          <div className="bg-gray-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Icons.Car className="w-8 h-8 text-gray-400" />
+      {/* Summary Stats (Mini-Compact 4-grid) */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="p-3 bg-white rounded-xl shadow-xs border border-slate-200/80 flex items-center justify-between">
+          <div>
+            <p className="text-xs font-normal text-slate-600">รถทั้งหมดในระบบ</p>
+            <p className="text-xl font-bold text-slate-900 mt-0.5 font-mono">{vehicles.length}</p>
           </div>
-          <h3 className="text-lg font-medium text-gray-900">ยังไม่มีรถในระบบ</h3>
-          <p className="text-gray-500 mt-1">เริ่มต้นด้วยการเพิ่มรถคันแรกของคุณ</p>
+          <div className="p-2 bg-slate-100 text-slate-700 rounded-lg border border-slate-200">
+            <Icons.Car className="w-4 h-4" />
+          </div>
         </div>
-      ) : (
-        <>
-          <VehicleTable vehicles={vehicles} />
-          <VehicleCards vehicles={vehicles} />
-        </>
-      )}
+
+        <div className="p-3 bg-white rounded-xl shadow-xs border border-slate-200/80 flex items-center justify-between">
+          <div>
+            <p className="text-xs font-normal text-slate-600">ว่างพร้อมใช้งาน</p>
+            <p className="text-xl font-bold text-emerald-900 mt-0.5 font-mono">{availableCount}</p>
+          </div>
+          <div className="p-2 bg-emerald-50 text-emerald-700 rounded-lg border border-emerald-200/60">
+            <Icons.CheckCircle className="w-4 h-4" />
+          </div>
+        </div>
+
+        <div className="p-3 bg-white rounded-xl shadow-xs border border-slate-200/80 flex items-center justify-between">
+          <div>
+            <p className="text-xs font-normal text-slate-600">กำลังใช้งาน / ทริป</p>
+            <p className="text-xl font-bold text-blue-900 mt-0.5 font-mono">{inUseCount}</p>
+          </div>
+          <div className="p-2 bg-blue-50 text-blue-700 rounded-lg border border-blue-200/60">
+            <Icons.Car className="w-4 h-4 text-blue-600" />
+          </div>
+        </div>
+
+        <div className="p-3 bg-white rounded-xl shadow-xs border border-slate-200/80 flex items-center justify-between">
+          <div>
+            <p className="text-xs font-normal text-slate-600">ซ่อมบำรุง / อู่</p>
+            <p className="text-xl font-bold text-rose-900 mt-0.5 font-mono">{maintenanceCount}</p>
+          </div>
+          <div className="p-2 bg-rose-50 text-rose-700 rounded-lg border border-rose-200/60">
+            <Icons.Wrench className="w-4 h-4 text-rose-600" />
+          </div>
+        </div>
+      </div>
+
+      {/* Main Container */}
+      <div className="bg-white rounded-xl shadow-xs border border-slate-200/80 overflow-hidden">
+        
+        {/* Controls Bar (Search, Status Filter, View Mode Toggle: Height h-9) */}
+        <div className="px-3.5 py-2.5 sm:px-4 sm:py-3 border-b border-slate-200/80 flex flex-col md:flex-row md:items-center justify-between gap-2.5 bg-white">
+          <div className="flex items-center gap-2">
+            <h2 className="text-sm font-bold text-slate-900">รายชื่อยานพาหนะ</h2>
+            <span className="text-xs font-normal text-slate-700 bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200 font-mono">
+              {filteredVehicles.length} คัน
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+            {/* Search Input h-9 */}
+            <div className="relative">
+              <span className="absolute inset-y-0 left-0 flex items-center pl-2.5 pointer-events-none text-slate-400">
+                <Icons.Search className="w-3.5 h-3.5" />
+              </span>
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="ค้นหาทะเบียน, ยี่ห้อ, รุ่น, คนขับ..."
+                className="h-9 w-48 sm:w-60 pl-8 pr-2.5 text-xs text-slate-800 placeholder:text-slate-400 bg-white border border-slate-300 rounded-lg focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 font-normal"
+              />
+            </div>
+
+            {/* Status Filter h-9 */}
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="h-9 px-2.5 text-xs text-slate-800 bg-white border border-slate-300 rounded-lg focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 font-normal cursor-pointer"
+            >
+              <option value="">ทุกสถานะ</option>
+              <option value="available">ว่างพร้อมใช้</option>
+              <option value="in_use">กำลังใช้งาน</option>
+              <option value="maintenance">ซ่อมบำรุง</option>
+              <option value="retired">เลิกใช้งาน</option>
+            </select>
+
+            {/* View Mode Toggle h-9 */}
+            <div className="h-9 p-0.5 bg-slate-100 rounded-lg border border-slate-300 flex items-center shrink-0">
+              <button
+                type="button"
+                onClick={() => setViewMode("table")}
+                className={`h-full px-2.5 rounded-md text-xs font-normal flex items-center gap-1.5 transition cursor-pointer ${
+                  viewMode === 'table' ? 'bg-white text-slate-900 shadow-xs font-semibold' : 'text-slate-600 hover:text-slate-900'
+                }`}
+                title="มุมมองตาราง"
+              >
+                <Icons.Table className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">ตาราง</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode("cards")}
+                className={`h-full px-2.5 rounded-md text-xs font-normal flex items-center gap-1.5 transition cursor-pointer ${
+                  viewMode === 'cards' ? 'bg-white text-slate-900 shadow-xs font-semibold' : 'text-slate-600 hover:text-slate-900'
+                }`}
+                title="มุมมองการ์ด"
+              >
+                <Icons.Grid className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">การ์ด</span>
+              </button>
+            </div>
+
+            {/* Clear Filter */}
+            {(searchQuery || statusFilter) && (
+              <button
+                onClick={() => { setSearchQuery(''); setStatusFilter(''); }}
+                className="h-9 px-2.5 text-xs font-normal text-rose-700 bg-rose-50 border border-rose-200 hover:bg-rose-100 rounded-lg transition-colors cursor-pointer shrink-0"
+              >
+                ล้างตัวกรอง
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Content: Empty / Table / Cards */}
+        {filteredVehicles.length === 0 ? (
+          <div className="text-center py-12 px-4">
+            <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-2 text-slate-400">
+              <Icons.Car className="w-5 h-5" />
+            </div>
+            <h3 className="text-sm font-semibold text-slate-900">ไม่พบข้อมูลยานพาหนะ</h3>
+            <p className="text-xs font-normal text-slate-500 mt-0.5">
+              {searchQuery || statusFilter 
+                ? 'ไม่พบรถที่ตรงกับเงื่อนไขการค้นหา' 
+                : 'ยังไม่มีข้อมูลยานพาหนะในระบบ'}
+            </p>
+          </div>
+        ) : viewMode === 'table' ? (
+          /* Table View: Compact & High Contrast */
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-slate-200">
+              <thead className="bg-slate-50/80">
+                <tr>
+                  <th className="px-3.5 py-2 text-left text-xs font-semibold text-slate-800 tracking-normal">ยานพาหนะ / ทะเบียน</th>
+                  <th className="px-3.5 py-2 text-left text-xs font-semibold text-slate-800 tracking-normal">สถานะ</th>
+                  <th className="px-3.5 py-2 text-left text-xs font-semibold text-slate-800 tracking-normal">ผู้ใช้งานล่าสุด</th>
+                  <th className="px-3.5 py-2 text-left text-xs font-semibold text-slate-800 tracking-normal">บันทึกล่าสุด</th>
+                  <th className="px-3.5 py-2 text-right text-xs font-semibold text-slate-800 tracking-normal">การจัดการ</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-slate-100">
+                {filteredVehicles.map(vehicle => {
+                  const status = getStatusConfig(vehicle.status);
+                  const isReturned = vehicle.latestBookingStatus && ['completed', 'finished', 'returned'].includes(vehicle.latestBookingStatus);
+
+                  return (
+                    <tr key={vehicle.id} className="hover:bg-slate-50/80 transition-colors">
+                      {/* Vehicle & Plate */}
+                      <td className="px-3.5 py-2.5 whitespace-nowrap">
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-12 h-9 rounded bg-slate-100 relative overflow-hidden shrink-0 border border-slate-200">
+                            {vehicle.imageUrl ? (
+                              <Image 
+                                src={vehicle.imageUrl} 
+                                alt={vehicle.model || 'Car'} 
+                                fill 
+                                className="object-cover" 
+                                unoptimized 
+                              />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center text-[10px] text-slate-400">
+                                <Icons.Car className="w-4 h-4 opacity-40" />
+                              </div>
+                            )}
+                          </div>
+                          <div>
+                            <div className="text-xs font-bold text-slate-900 font-mono">
+                              {vehicle.licensePlate}
+                            </div>
+                            <div className="text-[11px] font-normal text-slate-600">
+                              {vehicle.brand} {vehicle.model}
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+
+                      {/* Status */}
+                      <td className="px-3.5 py-2.5 whitespace-nowrap">
+                        <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-normal ${status.bg}`}>
+                          <span className={`w-1.5 h-1.5 rounded-full ${status.dot}`}></span>
+                          {status.label}
+                        </span>
+                      </td>
+
+                      {/* User */}
+                      <td className="px-3.5 py-2.5 whitespace-nowrap">
+                        {vehicle.driver || vehicle.driverName ? (
+                          <div className="flex items-center gap-1.5">
+                            <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] shrink-0 ${isReturned ? 'bg-slate-100 text-slate-500' : 'bg-blue-50 text-blue-700 font-bold'}`}>
+                              <Icons.User className="w-3 h-3" />
+                            </div>
+                            <div className="text-xs">
+                              <span className={`font-normal ${isReturned ? 'text-slate-500' : 'text-slate-900 font-semibold'}`}>
+                                {isReturned ? 'ล่าสุด: ' : ''}
+                                {vehicle.driver?.displayName || vehicle.driver?.name || vehicle.driverName}
+                              </span>
+                            </div>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-slate-400 font-normal italic">ว่าง</span>
+                        )}
+                      </td>
+
+                      {/* Latest Logs */}
+                      <td className="px-3.5 py-2.5 whitespace-nowrap">
+                        <div className="flex flex-col gap-0.5 text-xs text-slate-700 font-normal">
+                          {vehicle.latestFuel ? (
+                            <span className="flex items-center gap-1 text-[11px]">
+                              <Icons.Drop className="w-3 h-3 text-blue-600" />
+                              <span>น้ำมัน: {new Date(vehicle.latestFuel.timestamp?.seconds * 1000).toLocaleDateString('th-TH')}</span>
+                            </span>
+                          ) : (
+                            <span className="flex items-center gap-1 text-[11px] text-slate-400">
+                              <Icons.Drop className="w-3 h-3 opacity-30" /> -
+                            </span>
+                          )}
+
+                          {vehicle.latestMaintenance ? (
+                            <span className="flex items-center gap-1 text-[11px]">
+                              <Icons.Wrench className="w-3 h-3 text-rose-600" />
+                              <span>ซ่อม: {new Date(vehicle.latestMaintenance.amount ? Date.now() : 0).toLocaleDateString('th-TH')}</span>
+                            </span>
+                          ) : (
+                            <span className="flex items-center gap-1 text-[11px] text-slate-400">
+                              <Icons.Wrench className="w-3 h-3 opacity-30" /> -
+                            </span>
+                          )}
+                        </div>
+                      </td>
+
+                      {/* Quick Action Buttons (Compact h-7) */}
+                      <td className="px-3.5 py-2.5 whitespace-nowrap text-right">
+                        <div className="flex items-center gap-1 justify-end">
+                          <Link 
+                            href={`/vehicles/${vehicle.id}/edit`} 
+                            className="h-7 px-2 text-xs font-normal text-slate-700 bg-white hover:bg-slate-50 border border-slate-300 rounded-md transition-colors flex items-center gap-1 cursor-pointer" 
+                            title="แก้ไขข้อมูลรถ"
+                          >
+                            <Icons.PencilSquare className="w-3 h-3" />
+                            <span className="hidden xl:inline">แก้ไข</span>
+                          </Link>
+
+                          <Link 
+                            href={`/vehicles/${vehicle.id}/garage`} 
+                            className="h-7 px-2 text-xs font-normal text-purple-700 bg-purple-50 hover:bg-purple-100 border border-purple-200 rounded-md transition-colors flex items-center gap-1 cursor-pointer" 
+                            title="ส่งซ่อม (อู่)"
+                          >
+                            <Icons.BuildingStorefront className="w-3 h-3" />
+                            <span className="hidden xl:inline">อู่</span>
+                          </Link>
+
+                          <Link 
+                            href={`/vehicles/${vehicle.id}/fuel`} 
+                            className="h-7 px-2 text-xs font-normal text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-md transition-colors flex items-center gap-1 cursor-pointer" 
+                            title="บันทึกเติมน้ำมัน"
+                          >
+                            <Icons.Drop className="w-3 h-3" />
+                            <span className="hidden xl:inline">น้ำมัน</span>
+                          </Link>
+
+                          <Link 
+                            href={`/vehicles/${vehicle.id}/fluid`} 
+                            className="h-7 px-2 text-xs font-normal text-amber-800 bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded-md transition-colors flex items-center gap-1 cursor-pointer" 
+                            title="เปลี่ยนของเหลว"
+                          >
+                            <Icons.Beaker className="w-3 h-3" />
+                            <span className="hidden xl:inline">ของเหลว</span>
+                          </Link>
+
+                          <Link 
+                            href={`/vehicles/${vehicle.id}/maintenance`} 
+                            className="h-7 px-2 text-xs font-normal text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-md transition-colors flex items-center gap-1 cursor-pointer" 
+                            title="ประวัติซ่อมบำรุง"
+                          >
+                            <Icons.Wrench className="w-3 h-3" />
+                            <span className="hidden xl:inline">ซ่อมบำรุง</span>
+                          </Link>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          /* Cards View: Compact & High Contrast */
+          <div className="p-3.5 sm:p-4 bg-slate-50/50">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {filteredVehicles.map(vehicle => {
+                const status = getStatusConfig(vehicle.status);
+                const isReturned = vehicle.latestBookingStatus && ['completed', 'finished', 'returned'].includes(vehicle.latestBookingStatus);
+
+                return (
+                  <div key={vehicle.id} className="bg-white p-3.5 rounded-xl shadow-xs border border-slate-200/80 hover:border-slate-300 transition-all flex flex-col justify-between">
+                    <div>
+                      {/* Card Header */}
+                      <div className="flex items-start justify-between gap-2 pb-2 mb-2 border-b border-slate-100">
+                        <div>
+                          <div className="text-xs font-bold text-slate-900 font-mono">
+                            {vehicle.licensePlate}
+                          </div>
+                          <div className="text-[11px] font-normal text-slate-600">
+                            {vehicle.brand} {vehicle.model}
+                          </div>
+                        </div>
+                        <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-normal ${status.bg}`}>
+                          <span className={`w-1.5 h-1.5 rounded-full ${status.dot}`}></span>
+                          {status.label}
+                        </span>
+                      </div>
+
+                      {/* Image & User Details */}
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className="w-16 h-12 relative rounded bg-slate-100 overflow-hidden shrink-0 border border-slate-200">
+                          {vehicle.imageUrl ? (
+                            <Image 
+                              src={vehicle.imageUrl} 
+                              alt={vehicle.model || 'Car'} 
+                              fill 
+                              className="object-cover" 
+                              unoptimized 
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-[10px] text-slate-400">
+                              <Icons.Car className="w-5 h-5 opacity-40" />
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="min-w-0 text-xs text-slate-700 font-normal space-y-0.5">
+                          <div className="flex items-center gap-1 truncate">
+                            <span className="text-slate-500 text-[11px]">ผู้ใช้:</span>
+                            <span className={`truncate text-[11px] ${isReturned ? 'text-slate-500' : 'text-slate-900 font-semibold'}`}>
+                              {vehicle.driver?.displayName || vehicle.driver?.name || vehicle.driverName || 'ว่าง'}
+                            </span>
+                          </div>
+
+                          {vehicle.latestFuel && (
+                            <div className="text-[10px] text-slate-500 flex items-center gap-1">
+                              <Icons.Drop className="w-2.5 h-2.5 text-blue-600" />
+                              <span>น้ำมัน: {new Date(vehicle.latestFuel.timestamp?.seconds * 1000).toLocaleDateString('th-TH')}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Card Actions Bar */}
+                    <div className="pt-2 border-t border-slate-100 flex items-center justify-between gap-1">
+                      <Link 
+                        href={`/vehicles/${vehicle.id}/edit`} 
+                        className="h-7 px-2 text-[11px] font-normal text-slate-700 bg-white hover:bg-slate-50 border border-slate-300 rounded flex items-center gap-1"
+                      >
+                        <Icons.PencilSquare className="w-3 h-3" />
+                        <span>แก้ไข</span>
+                      </Link>
+
+                      <div className="flex items-center gap-1">
+                        <Link 
+                          href={`/vehicles/${vehicle.id}/garage`} 
+                          className="h-7 px-2 text-[11px] font-normal text-purple-700 bg-purple-50 hover:bg-purple-100 border border-purple-200 rounded flex items-center gap-0.5" 
+                          title="อู่ซ่อม"
+                        >
+                          <Icons.BuildingStorefront className="w-3 h-3" />
+                          <span>อู่</span>
+                        </Link>
+                        <Link 
+                          href={`/vehicles/${vehicle.id}/fuel`} 
+                          className="h-7 px-2 text-[11px] font-normal text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded flex items-center gap-0.5" 
+                          title="น้ำมัน"
+                        >
+                          <Icons.Drop className="w-3 h-3" />
+                          <span>น้ำมัน</span>
+                        </Link>
+                        <Link 
+                          href={`/vehicles/${vehicle.id}/fluid`} 
+                          className="h-7 px-2 text-[11px] font-normal text-amber-800 bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded flex items-center gap-0.5" 
+                          title="ของเหลว"
+                        >
+                          <Icons.Beaker className="w-3 h-3" />
+                          <span>ของเหลว</span>
+                        </Link>
+                        <Link 
+                          href={`/vehicles/${vehicle.id}/maintenance`} 
+                          className="h-7 px-2 text-[11px] font-normal text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded flex items-center gap-0.5" 
+                          title="ซ่อมบำรุง"
+                        >
+                          <Icons.Wrench className="w-3 h-3" />
+                          <span>ซ่อม</span>
+                        </Link>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

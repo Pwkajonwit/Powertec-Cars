@@ -2,7 +2,6 @@
 
 import { useAuth } from "@/context/AuthContext";
 import AdminSidebar from "@/components/admin/AdminSidebar";
-import AdminHeader from "@/components/admin/AdminHeader";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
@@ -89,8 +88,17 @@ function AdminLayoutContent({ children }) {
     <div className="flex">
       <AdminSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <main className="flex-1 min-h-screen flex flex-col bg-gray-100">
-        <div className="px-4 py-2 md:p-6 md:py-2 bg-white shadow-sm">
-          <AdminHeader onMenuClick={() => setSidebarOpen(true)} />
+        {/* Mobile menu toggle (hidden on desktop) */}
+        <div className="md:hidden px-4 pt-3 flex items-center justify-between">
+          <button
+            onClick={() => setSidebarOpen(true)}
+            className="p-2 rounded-lg bg-white border border-slate-200 text-slate-800 shadow-xs hover:bg-slate-50 transition-colors cursor-pointer"
+            aria-label="Open menu"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </button>
         </div>
         <div className="p-4 md:p-6 flex-1 overflow-y-auto">
           {children}
