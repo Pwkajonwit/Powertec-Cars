@@ -4,6 +4,80 @@ import { useState, useEffect } from 'react';
 import { collection, query, orderBy, doc, setDoc, onSnapshot } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import AlertToast from '@/components/ui/AlertToast';
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  PointElement,
+  LineElement,
+  Filler,
+  Tooltip as ChartTooltip,
+  Legend as ChartLegend,
+} from 'chart.js';
+import { Bar, Line } from 'react-chartjs-2';
+
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  PointElement,
+  LineElement,
+  Filler,
+  ChartTooltip,
+  ChartLegend
+);
+
+const thresholdLinePlugin = {
+  id: 'thresholdLine',
+  afterDatasetsDraw(chart, _args, pluginOptions) {
+    const value = Number(pluginOptions?.value);
+    if (!value || value <= 0) return;
+
+    const { ctx, chartArea, scales } = chart;
+    const orientation = pluginOptions?.orientation || 'horizontal';
+
+    ctx.save();
+    ctx.strokeStyle = '#f43f5e';
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([5, 4]);
+    ctx.fillStyle = '#e11d48';
+    ctx.font = 'bold 11px sans-serif';
+
+    if (orientation === 'vertical' && scales.x) {
+      const x = scales.x.getPixelForValue(value);
+      if (x >= chartArea.left && x <= chartArea.right) {
+        ctx.beginPath();
+        ctx.moveTo(x, chartArea.top);
+        ctx.lineTo(x, chartArea.bottom);
+        ctx.stroke();
+        ctx.textAlign = x > chartArea.right - 80 ? 'right' : 'left';
+        ctx.fillText(`เกณฑ์ (${value})`, x + (x > chartArea.right - 80 ? -5 : 5), chartArea.top + 12);
+      }
+    } else if (orientation === 'horizontal' && scales.y) {
+      const y = scales.y.getPixelForValue(value);
+      if (y >= chartArea.top && y <= chartArea.bottom) {
+        ctx.beginPath();
+        ctx.moveTo(chartArea.left, y);
+        ctx.lineTo(chartArea.right, y);
+        ctx.stroke();
+        ctx.textAlign = 'right';
+        ctx.fillText(`เกณฑ์ (${value})`, chartArea.right - 4, y - 5);
+      }
+    }
+    ctx.restore();
+  }
+};
+
+function getVehicleWeightedStats(fuelRecords, vehicleId) {
+  const records = fuelRecords.filter(
+    r => r.vehicleId === vehicleId && r.distanceTraveled > 0 && r.amount > 0
+  );
+  const totalDistance = records.reduce((sum, r) => sum + r.distanceTraveled, 0);
+  const totalCost = records.reduce((sum, r) => sum + r.amount, 0);
+  const avgEfficiency = totalCost > 0 ? (totalDistance / totalCost) * 1000 : 0;
+  return { records, totalDistance, totalCost, avgEfficiency };
+}
 
 // --- Icons ---
 const Icons = {
@@ -105,21 +179,25 @@ export default function VehiclesAnalysisPage() {
       }
 
       const now = new Date();
-      let startDateTime = new Date();
+      let startDateTime = null;
       let endDateTime = now;
       switch (dateRange) {
         case 'today':
+          startDateTime = new Date();
           startDateTime.setHours(0, 0, 0, 0);
           break;
         case 'week':
+          startDateTime = new Date();
           startDateTime.setDate(now.getDate() - 7);
           break;
         case 'month':
+          startDateTime = new Date();
           startDateTime.setMonth(now.getMonth() - 1);
           break;
         case 'custom':
-          if (startDate && endDate) {
-            startDateTime = new Date(startDate);
+          startDateTime = startDate ? new Date(startDate) : null;
+          if (startDateTime) startDateTime.setHours(0, 0, 0, 0);
+          if (endDate) {
             endDateTime = new Date(endDate);
             endDateTime.setHours(23, 59, 59, 999);
           }
@@ -128,62 +206,83 @@ export default function VehiclesAnalysisPage() {
 
       allExpenses = allExpenses.filter(exp => {
         const expDate = exp.timestamp;
-        return expDate >= startDateTime && expDate <= endDateTime;
+        if (Number.isNaN(expDate?.getTime?.())) return false;
+        if (startDateTime && expDate < startDateTime) return false;
+        if (endDateTime && expDate > endDateTime) return false;
+        return true;
       });
 
-      const fuelExpenses = allExpenses.filter(exp => exp.type === 'fuel' && exp.mileage);
+      const fuelExpenses = allExpenses.filter(
+        exp => exp.type === 'fuel' && exp.mileage !== undefined && exp.mileage !== null && exp.mileage !== ''
+      );
 
       let allFuelRecords = [];
       const targetVehicles = selectedVehicle === 'all' ? vehicles : vehicles.filter(v => v.id === selectedVehicle);
 
       targetVehicles.forEach(vehicle => {
         const vFuelRecords = fuelExpenses
-          .filter(r => r.vehicleId === vehicle.id && r.mileage !== undefined && r.mileage !== null)
-          .sort((a, b) => a.mileage - b.mileage);
+          .filter(r => r.vehicleId === vehicle.id)
+          .sort((a, b) => {
+            const mileageDiff = Number(a.mileage) - Number(b.mileage);
+            if (mileageDiff !== 0) return mileageDiff;
+            return new Date(a.timestamp) - new Date(b.timestamp);
+          });
 
         vFuelRecords.forEach((exp, index) => {
+          const currentMileage = Number(exp.mileage);
+          const currentAmount = Number(exp.amount) || 0;
           let distanceTraveled = 0;
           let fuelEfficiency = null;
           let costPerKm = null;
+
           if (index > 0) {
             const prevExp = vFuelRecords[index - 1];
-            distanceTraveled = exp.mileage - prevExp.mileage;
+            distanceTraveled = currentMileage - Number(prevExp.mileage);
 
-            if (distanceTraveled > 0 && prevExp.amount > 0) {
-              fuelEfficiency = (distanceTraveled / prevExp.amount) * 1000;
-              costPerKm = prevExp.amount / distanceTraveled;
+            if (distanceTraveled > 0 && currentAmount > 0) {
+              fuelEfficiency = (distanceTraveled / currentAmount) * 1000;
+              costPerKm = currentAmount / distanceTraveled;
             }
           }
-          allFuelRecords.push({ ...exp, distanceTraveled, fuelEfficiency, costPerKm });
+
+          allFuelRecords.push({
+            ...exp,
+            mileage: currentMileage,
+            amount: currentAmount,
+            distanceTraveled,
+            fuelEfficiency,
+            costPerKm
+          });
         });
       });
 
-      const validEfficiencies = allFuelRecords.filter(r => r.fuelEfficiency !== null);
-      const avgFuelEfficiency = validEfficiencies.length > 0
-        ? validEfficiencies.reduce((sum, r) => sum + r.fuelEfficiency, 0) / validEfficiencies.length
-        : 0;
-      const totalExpenses = allExpenses.reduce((sum, exp) => sum + (exp.amount || 0), 0);
-      const totalFuelExpenses = fuelExpenses.reduce((sum, exp) => sum + (exp.amount || 0), 0);
+      // เรียงประวัติการเติมน้ำมันจากล่าสุดไปเก่าสุดเมื่อรวมทุกคันแล้ว
+      allFuelRecords.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 
-      let totalDistance = targetVehicles.reduce((sum, v) => {
-        const vStartMileage = v.currentMileage !== undefined && v.currentMileage !== null ? Number(v.currentMileage) : null;
-        const vFuelRecords = fuelExpenses.filter(r => r.vehicleId === v.id && r.mileage !== undefined && r.mileage !== null);
-        if (vFuelRecords.length > 0 && vStartMileage !== null) {
-          const maxMileage = Math.max(...vFuelRecords.map(r => Number(r.mileage)));
-          return sum + Math.max(0, maxMileage - vStartMileage);
-        }
-        return sum;
-      }, 0);
+      const totalExpenses = allExpenses.reduce((sum, exp) => sum + (Number(exp.amount) || 0), 0);
+      const totalFuelExpenses = fuelExpenses.reduce((sum, exp) => sum + (Number(exp.amount) || 0), 0);
 
+      // ระยะทางรวมจากช่วงที่มีการเติมน้ำมันจริง (max - min ของแต่ละช่วงรวมกัน)
+      const totalDistance = allFuelRecords.reduce(
+        (sum, r) => sum + (r.distanceTraveled > 0 ? r.distanceTraveled : 0),
+        0
+      );
+
+      // ต้นทุนค่าน้ำมันเฉพาะรายการที่มีระยะทางรองรับ เพื่อคำนวณค่าเฉลี่ยถ่วงน้ำหนักที่ตรงกับตาราง
+      const matchedFuelRecords = allFuelRecords.filter(r => r.distanceTraveled > 0 && r.amount > 0);
+      const matchedFuelCost = matchedFuelRecords.reduce((sum, r) => sum + r.amount, 0);
+      const matchedDistance = matchedFuelRecords.reduce((sum, r) => sum + r.distanceTraveled, 0);
+
+      const avgFuelEfficiency = matchedFuelCost > 0 ? (matchedDistance / matchedFuelCost) * 1000 : 0;
+      const costPerKm = matchedDistance > 0 ? matchedFuelCost / matchedDistance : 0;
       const totalTrips = allFuelRecords.length;
-      const costPerKm = totalDistance > 0 ? totalExpenses / totalDistance : 0;
 
       setAnalysisData({
         totalTrips,
         totalDistance,
         totalExpenses,
         totalFuelExpenses,
-        fuelRecords: allFuelRecords.reverse(),
+        fuelRecords: allFuelRecords,
         averageFuelEfficiency: avgFuelEfficiency,
         costPerKm,
       });
@@ -396,11 +495,12 @@ export default function VehiclesAnalysisPage() {
 
             <div className="p-0">
               {(() => {
-                const filteredVehicles = vehicles.filter(vehicle => {
-                  const vFuelRecords = analysisData.fuelRecords.filter(r => r.vehicleId === vehicle.id && r.fuelEfficiency !== null);
-                  const avgEff = vFuelRecords.length > 0 ? (vFuelRecords.reduce((sum, r) => sum + r.fuelEfficiency, 0) / vFuelRecords.length) : 0;
-                  return avgEff > 0 && avgEff < threshold;
-                });
+                const filteredVehicles = vehicles
+                  .map(vehicle => ({
+                    vehicle,
+                    ...getVehicleWeightedStats(analysisData.fuelRecords, vehicle.id)
+                  }))
+                  .filter(item => item.avgEfficiency > 0 && item.avgEfficiency < threshold);
 
                 if (filteredVehicles.length === 0) {
                   return (
@@ -421,11 +521,7 @@ export default function VehiclesAnalysisPage() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 bg-white">
-                      {filteredVehicles.map(vehicle => {
-                        const vFuelRecords = analysisData.fuelRecords.filter(r => r.vehicleId === vehicle.id && r.fuelEfficiency !== null);
-                        const avgEff = vFuelRecords.length > 0 ? (vFuelRecords.reduce((sum, r) => sum + r.fuelEfficiency, 0) / vFuelRecords.length) : 0;
-
-                        return (
+                      {filteredVehicles.map(({ vehicle, avgEfficiency }) => (
                           <tr key={vehicle.id} className="hover:bg-rose-50/40 transition-colors">
                             <td className="px-3.5 py-2.5 whitespace-nowrap text-xs font-bold text-slate-900 font-mono">
                               {vehicle.licensePlate}
@@ -434,7 +530,7 @@ export default function VehiclesAnalysisPage() {
                               {vehicle.brand} {vehicle.model}
                             </td>
                             <td className="px-3.5 py-2.5 whitespace-nowrap text-right text-xs font-bold text-rose-700 font-mono">
-                              {avgEff.toFixed(1)} กม./1000฿
+                              {avgEfficiency.toFixed(1)} กม./1000฿
                             </td>
                             <td className="px-3.5 py-2.5 whitespace-nowrap text-right">
                               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-normal bg-rose-50 text-rose-800 border border-rose-200">
@@ -442,8 +538,7 @@ export default function VehiclesAnalysisPage() {
                               </span>
                             </td>
                           </tr>
-                        );
-                      })}
+                      ))}
                     </tbody>
                   </table>
                 );
@@ -451,194 +546,258 @@ export default function VehiclesAnalysisPage() {
             </div>
           </div>
 
-          {/* Fuel Efficiency Chart (Compact Card) */}
+          {/* Fuel Efficiency Chart (Horizontal Bar for All / Area Line for Single Vehicle) */}
           <div className="bg-white rounded-xl shadow-xs border border-slate-200/80 p-3.5 sm:p-4">
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-sm font-semibold text-slate-900">กราฟค่าวิ่งได้รายคัน (กม./1,000 บาท)</h2>
-              <span className="text-[11px] text-slate-500 font-normal">เปรียบเทียบตามช่วงเวลา</span>
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+              <div>
+                <h2 className="text-sm font-semibold text-slate-900">
+                  {selectedVehicle === 'all'
+                    ? 'เปรียบเทียบค่าวิ่งได้เฉลี่ยรายคัน (กม./1,000 บาท)'
+                    : `แนวโน้มค่าวิ่งได้: ${vehicles.find(v => v.id === selectedVehicle)?.licensePlate || ''}`}
+                </h2>
+                <p className="text-[11px] text-slate-500 font-normal">
+                  {selectedVehicle === 'all'
+                    ? 'เรียงจากค่าน้อยไปมาก · คลิกที่แท่งกราฟเพื่อดูแนวโน้มรายคัน'
+                    : 'แสดงอัตราวิ่งได้ตามลำดับวันที่เติมน้ำมัน (กม./1,000 บาท)'}
+                </p>
+              </div>
+              {selectedVehicle !== 'all' && (
+                <button
+                  onClick={() => { setSelectedVehicle('all'); setCurrentPage(1); }}
+                  className="h-8 px-2.5 text-xs font-normal text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-lg transition-colors cursor-pointer"
+                >
+                  ← ดูรถทั้งหมด
+                </button>
+              )}
             </div>
 
-            {(() => {
-              const chartData = vehicles.map(vehicle => {
-                const vFuelRecords = analysisData.fuelRecords
-                  .filter(r => r.vehicleId === vehicle.id && r.fuelEfficiency !== null)
-                  .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-                return {
-                  vehicle,
-                  records: vFuelRecords,
-                };
-              }).filter(v => v.records.length > 0);
+            {selectedVehicle === 'all' ? (
+              (() => {
+                const vehicleStats = vehicles
+                  .map(vehicle => ({
+                    vehicle,
+                    ...getVehicleWeightedStats(analysisData.fuelRecords, vehicle.id)
+                  }))
+                  .filter(item => item.records.length > 0 && item.avgEfficiency > 0)
+                  .sort((a, b) => a.avgEfficiency - b.avgEfficiency);
 
-              if (chartData.length === 0) {
+                if (vehicleStats.length === 0) {
+                  return (
+                    <div className="text-center text-slate-400 py-12 text-xs font-normal">
+                      ไม่มีข้อมูลการเติมน้ำมันที่เพียงพอสำหรับการสร้างกราฟในช่วงเวลานี้
+                    </div>
+                  );
+                }
+
+                const chartHeight = Math.max(240, vehicleStats.length * 36 + 60);
+                const barData = {
+                  labels: vehicleStats.map(s => s.vehicle.licensePlate),
+                  datasets: [
+                    {
+                      label: 'ค่าวิ่งได้เฉลี่ย (กม./1,000 บาท)',
+                      data: vehicleStats.map(s => Number(s.avgEfficiency.toFixed(1))),
+                      backgroundColor: vehicleStats.map(s =>
+                        s.avgEfficiency < threshold
+                          ? 'rgba(244, 63, 94, 0.85)'
+                          : s.avgEfficiency < threshold * 1.5
+                            ? 'rgba(245, 158, 11, 0.85)'
+                            : 'rgba(16, 185, 129, 0.85)'
+                      ),
+                      borderColor: vehicleStats.map(s =>
+                        s.avgEfficiency < threshold
+                          ? '#e11d48'
+                          : s.avgEfficiency < threshold * 1.5
+                            ? '#d97706'
+                            : '#059669'
+                      ),
+                      borderWidth: 1,
+                      borderRadius: 6,
+                      barThickness: 20,
+                    }
+                  ]
+                };
+
+                const barOptions = {
+                  indexAxis: 'y',
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  onClick: (_event, elements) => {
+                    if (elements.length > 0) {
+                      const idx = elements[0].index;
+                      const clicked = vehicleStats[idx];
+                      if (clicked) {
+                        setSelectedVehicle(clicked.vehicle.id);
+                        setCurrentPage(1);
+                      }
+                    }
+                  },
+                  onHover: (event, chartElement) => {
+                    if (event?.native?.target) {
+                      event.native.target.style.cursor = chartElement.length > 0 ? 'pointer' : 'default';
+                    }
+                  },
+                  plugins: {
+                    legend: { display: false },
+                    thresholdLine: { value: threshold, orientation: 'vertical' },
+                    tooltip: {
+                      backgroundColor: 'rgba(15, 23, 42, 0.92)',
+                      padding: 10,
+                      titleFont: { size: 12, weight: 'bold' },
+                      bodyFont: { size: 11 },
+                      callbacks: {
+                        label: (ctx) => {
+                          const stat = vehicleStats[ctx.dataIndex];
+                          return [
+                            ` ค่าวิ่งได้เฉลี่ย: ${stat.avgEfficiency.toFixed(1)} กม./1,000฿`,
+                            ` ระยะทางรวม: ${stat.totalDistance.toLocaleString()} กม.`,
+                            ` ค่าน้ำมัน: ${stat.totalCost.toLocaleString()} ฿ (${stat.records.length} ช่วง)`
+                          ];
+                        }
+                      }
+                    }
+                  },
+                  scales: {
+                    x: {
+                      beginAtZero: true,
+                      suggestedMax: Math.max(...vehicleStats.map(s => s.avgEfficiency), threshold) * 1.1,
+                      grid: { color: '#f1f5f9' },
+                      ticks: {
+                        font: { size: 11 },
+                        color: '#64748b',
+                        callback: (v) => `${v}`
+                      },
+                      title: {
+                        display: true,
+                        text: 'กม. / 1,000 บาท',
+                        color: '#64748b',
+                        font: { size: 11 }
+                      }
+                    },
+                    y: {
+                      grid: { display: false },
+                      ticks: {
+                        font: { size: 11, weight: 'bold', family: 'monospace' },
+                        color: '#1e293b'
+                      }
+                    }
+                  }
+                };
+
                 return (
-                  <div className="text-center text-slate-400 py-12 text-xs font-normal">
-                    ไม่มีข้อมูลการเติมน้ำมันที่เพียงพอสำหรับการสร้างกราฟในช่วงเวลานี้
+                  <div>
+                    <div style={{ height: `${chartHeight}px` }} className="w-full">
+                      <Bar data={barData} options={barOptions} plugins={[thresholdLinePlugin]} />
+                    </div>
+                    <div className="flex flex-wrap items-center justify-center gap-4 mt-3 pt-2.5 border-t border-slate-100 text-[11px] text-slate-600">
+                      <span className="inline-flex items-center gap-1.5">
+                        <span className="w-2.5 h-2.5 rounded-xs bg-rose-500"></span>
+                        ต่ำกว่าเกณฑ์ (&lt; {threshold})
+                      </span>
+                      <span className="inline-flex items-center gap-1.5">
+                        <span className="w-2.5 h-2.5 rounded-xs bg-amber-500"></span>
+                        พอใช้ ({threshold} - {(threshold * 1.5).toFixed(0)})
+                      </span>
+                      <span className="inline-flex items-center gap-1.5">
+                        <span className="w-2.5 h-2.5 rounded-xs bg-emerald-500"></span>
+                        ประหยัดดี (≥ {(threshold * 1.5).toFixed(0)})
+                      </span>
+                    </div>
                   </div>
                 );
-              }
+              })()
+            ) : (
+              (() => {
+                const singleRecords = analysisData.fuelRecords
+                  .filter(r => r.vehicleId === selectedVehicle && r.fuelEfficiency !== null)
+                  .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
 
-              const allEfficiencies = chartData.flatMap(v => v.records.map(r => r.fuelEfficiency));
-              const maxEff = Math.max(...allEfficiencies, 1000);
-              const minEff = 0;
-              const chartHeight = 280;
-              const chartPadding = { top: 20, right: 20, bottom: 50, left: 55 };
-              const svgWidth = 900;
+                if (singleRecords.length === 0) {
+                  return (
+                    <div className="text-center text-slate-400 py-12 text-xs font-normal">
+                      ไม่มีข้อมูลการเติมน้ำมันที่เพียงพอสำหรับการสร้างกราฟในช่วงเวลานี้
+                    </div>
+                  );
+                }
 
-              const yScale = (value) => {
-                return chartHeight - chartPadding.bottom - ((value - minEff) / (maxEff - minEff)) * (chartHeight - chartPadding.top - chartPadding.bottom);
-              };
+                const lineData = {
+                  labels: singleRecords.map(r =>
+                    new Date(r.timestamp).toLocaleDateString('th-TH', { day: '2-digit', month: 'short' })
+                  ),
+                  datasets: [
+                    {
+                      label: 'ค่าวิ่งได้ (กม./1,000 บาท)',
+                      data: singleRecords.map(r => Number(r.fuelEfficiency.toFixed(1))),
+                      borderColor: '#059669',
+                      backgroundColor: 'rgba(16, 185, 129, 0.12)',
+                      fill: true,
+                      tension: 0.25,
+                      borderWidth: 2.5,
+                      pointRadius: 5,
+                      pointHoverRadius: 7,
+                      pointBorderColor: '#ffffff',
+                      pointBorderWidth: 2,
+                      pointBackgroundColor: singleRecords.map(r =>
+                        r.fuelEfficiency < threshold ? '#e11d48' : '#059669'
+                      ),
+                    }
+                  ]
+                };
 
-              const allDates = [...new Set(chartData.flatMap(v =>
-                v.records.map(r => new Date(r.timestamp).toLocaleDateString('th-TH', { day: '2-digit', month: 'short' }))
-              ))].sort();
+                const lineOptions = {
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  plugins: {
+                    legend: { display: false },
+                    thresholdLine: { value: threshold, orientation: 'horizontal' },
+                    tooltip: {
+                      backgroundColor: 'rgba(15, 23, 42, 0.92)',
+                      padding: 10,
+                      titleFont: { size: 12, weight: 'bold' },
+                      bodyFont: { size: 11 },
+                      callbacks: {
+                        title: (items) => {
+                          const r = singleRecords[items[0].dataIndex];
+                          return formatDate(r.timestamp);
+                        },
+                        label: (ctx) => {
+                          const r = singleRecords[ctx.dataIndex];
+                          return [
+                            ` ค่าวิ่งได้: ${r.fuelEfficiency.toFixed(1)} กม./1,000฿`,
+                            ` ระยะทางที่วิ่ง: ${r.distanceTraveled.toLocaleString()} กม.`,
+                            ` จำนวนเงิน: ${r.amount.toLocaleString()} ฿`,
+                            ` เลขไมล์: ${r.mileage.toLocaleString()} กม.`
+                          ];
+                        }
+                      }
+                    }
+                  },
+                  scales: {
+                    x: {
+                      grid: { display: false },
+                      ticks: { font: { size: 11 }, color: '#64748b' }
+                    },
+                    y: {
+                      beginAtZero: true,
+                      suggestedMax: Math.max(...singleRecords.map(r => r.fuelEfficiency), threshold) * 1.15,
+                      grid: { color: '#f1f5f9' },
+                      ticks: { font: { size: 11 }, color: '#64748b' },
+                      title: {
+                        display: true,
+                        text: 'กม. / 1,000 บาท',
+                        color: '#64748b',
+                        font: { size: 11 }
+                      }
+                    }
+                  }
+                };
 
-              const xScale = (index) => {
-                return chartPadding.left + (index / (Math.max(1, allDates.length - 1))) * (svgWidth - chartPadding.left - chartPadding.right);
-              };
-
-              const colors = [
-                '#059669', '#2563eb', '#d97706', '#dc2626', '#7c3aed',
-                '#db2777', '#0d9488', '#ea580c', '#0891b2', '#65a30d'
-              ];
-
-              return (
-                <div className="w-full">
-                  <div className="overflow-x-auto">
-                    <svg width="100%" height={chartHeight} viewBox={`0 0 ${svgWidth} ${chartHeight}`} preserveAspectRatio="xMidYMid meet" className="mx-auto select-none">
-                      {/* Grid lines & Y labels */}
-                      {[0, 0.25, 0.5, 0.75, 1].map((ratio) => {
-                        const value = minEff + (maxEff - minEff) * ratio;
-                        const y = yScale(value);
-                        return (
-                          <g key={ratio}>
-                            <line
-                              x1={chartPadding.left}
-                              y1={y}
-                              x2={svgWidth - chartPadding.right}
-                              y2={y}
-                              stroke="#e2e8f0"
-                              strokeWidth="1"
-                              strokeDasharray="3 3"
-                            />
-                            <text
-                              x={chartPadding.left - 8}
-                              y={y + 4}
-                              textAnchor="end"
-                              fontSize="11"
-                              fill="#64748b"
-                              fontFamily="monospace"
-                            >
-                              {value.toFixed(0)}
-                            </text>
-                          </g>
-                        );
-                      })}
-
-                      {/* Threshold horizontal line */}
-                      {threshold > 0 && threshold <= maxEff && (
-                        <g>
-                          <line
-                            x1={chartPadding.left}
-                            y1={yScale(threshold)}
-                            x2={svgWidth - chartPadding.right}
-                            y2={yScale(threshold)}
-                            stroke="#f43f5e"
-                            strokeWidth="1.5"
-                            strokeDasharray="4 2"
-                          />
-                          <text
-                            x={svgWidth - chartPadding.right}
-                            y={yScale(threshold) - 5}
-                            textAnchor="end"
-                            fontSize="10"
-                            fill="#f43f5e"
-                            fontWeight="bold"
-                          >
-                            เกณฑ์ ({threshold})
-                          </text>
-                        </g>
-                      )}
-
-                      {/* X labels (Dates) */}
-                      {allDates.map((date, index) => {
-                        const x = xScale(index);
-                        return (
-                          <text
-                            key={index}
-                            x={x}
-                            y={chartHeight - chartPadding.bottom + 18}
-                            textAnchor="middle"
-                            fontSize="10"
-                            fill="#64748b"
-                            fontFamily="monospace"
-                          >
-                            {date}
-                          </text>
-                        );
-                      })}
-
-                      {/* Lines & Points */}
-                      {chartData.map((vehicleData, vIndex) => {
-                        const points = vehicleData.records.map((record) => {
-                          const dateStr = new Date(record.timestamp).toLocaleDateString('th-TH', { day: '2-digit', month: 'short' });
-                          const dateIndex = allDates.indexOf(dateStr);
-                          const x = xScale(dateIndex);
-                          const y = yScale(record.fuelEfficiency);
-                          return { x, y, record };
-                        });
-
-                        const pathD = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
-                        const lineColor = colors[vIndex % colors.length];
-
-                        return (
-                          <g key={vehicleData.vehicle.id}>
-                            <path
-                              d={pathD}
-                              fill="none"
-                              stroke={lineColor}
-                              strokeWidth="2"
-                              strokeLinejoin="round"
-                              strokeLinecap="round"
-                            />
-                            {points.map((point, pIndex) => (
-                              <circle
-                                key={pIndex}
-                                cx={point.x}
-                                cy={point.y}
-                                r="3.5"
-                                fill={lineColor}
-                                stroke="white"
-                                strokeWidth="1.5"
-                              >
-                                <title>
-                                  {vehicleData.vehicle.licensePlate}: {point.record.fuelEfficiency.toFixed(1)} กม./1000฿
-                                </title>
-                              </circle>
-                            ))}
-                          </g>
-                        );
-                      })}
-                    </svg>
+                return (
+                  <div className="h-[280px] w-full">
+                    <Line data={lineData} options={lineOptions} plugins={[thresholdLinePlugin]} />
                   </div>
-
-                  {/* Legend (Pills) */}
-                  <div className="flex flex-wrap gap-1.5 justify-center mt-3 pt-2 border-t border-slate-100">
-                    {chartData.map((vehicleData, vIndex) => {
-                      const lineColor = colors[vIndex % colors.length];
-                      const avgEff = vehicleData.records.reduce((sum, r) => sum + r.fuelEfficiency, 0) / vehicleData.records.length;
-
-                      return (
-                        <div key={vehicleData.vehicle.id} className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-slate-50 border border-slate-200 rounded-md text-xs">
-                          <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: lineColor }}></div>
-                          <span className="font-bold text-slate-900 font-mono text-[11px]">{vehicleData.vehicle.licensePlate}</span>
-                          <span className="text-slate-600 font-mono text-[10px]">({avgEff.toFixed(1)} กม./1000฿)</span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              );
-            })()}
+                );
+              })()
+            )}
           </div>
 
           {/* Fuel History Table (Compact) */}
@@ -707,10 +866,10 @@ export default function VehiclesAnalysisPage() {
                             <td className="px-3.5 py-2.5 whitespace-nowrap text-right text-xs font-mono">
                               {record.fuelEfficiency !== null ? (
                                 <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-normal border ${
-                                  record.fuelEfficiency >= 500 
-                                    ? 'bg-emerald-50 text-emerald-900 border-emerald-200' 
-                                    : record.fuelEfficiency >= 300 
-                                      ? 'bg-amber-50 text-amber-900 border-amber-200' 
+                                  record.fuelEfficiency >= threshold * 1.5
+                                    ? 'bg-emerald-50 text-emerald-900 border-emerald-200'
+                                    : record.fuelEfficiency >= threshold
+                                      ? 'bg-amber-50 text-amber-900 border-amber-200'
                                       : 'bg-rose-50 text-rose-900 border-rose-200'
                                 }`}>
                                   {record.fuelEfficiency.toFixed(1)} กม./1000฿
